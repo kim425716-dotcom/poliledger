@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏛️ PoliLedger
 
-## Getting Started
+> **Political Expense Tracking, Meeting & Rally Auditing, and Campaign Finance Transparency System**
 
-First, run the development server:
+PoliLedger is an enterprise-grade web application designed for politicians, campaign managers, staff, auditors, and oversight bodies to track, manage, verify, and publicly report campaign-related expenditures for rallies, political meetings, and grassroots operations.
+
+---
+
+## 🌟 Key Features
+
+### 1. Multi-Stakeholder Role-Based Access (RBAC)
+- **Politician (Account Principal):** Complete visibility over campaign spending, high-level approvals, budget ceiling controls.
+- **Campaign Manager / Staff:** Log operational expenditures, schedule rallies, link expenses to specific meetings, and attach digital invoices/receipts.
+- **Auditor / Finance Officer:** Independent compliance verification, review vouchers, and approve or reject claims with recorded audit notes.
+- **Admin:** System settings, category limits, and access governance.
+
+### 2. Event & Rally Management
+- Schedule and categorize political events: **Public Rallies**, **Closed-Door Meetings**, **Press Conferences**, and **Fundraisers**.
+- Track expected attendance vs. actual crowds.
+- Allocate dedicated event budgets with automated calculation of cost-per-attendee and budget exhaustion.
+- Drill down into itemized expenditures tied specifically to individual rallies.
+
+### 3. Expense Tracking & Receipt Verification
+- Detailed logging: Date, Category (Venue, Transport, Catering, Security, Media, etc.), Description, Amount, Vendor, and Town/Location.
+- Digital document upload (receipts, contracts, invoices) with an interactive verification canvas.
+- Multi-currency view with real-time conversion: **KES (Kenyan Shillings)**, **USD**, **EUR**, and **GBP**.
+- Real-time budget warning banners triggered automatically at **75%** and **90%** of category/event limits.
+
+### 4. Regulatory Reporting & Public Transparency
+- **Formal Audit Statements:** Pre-formatted reports compliant with election commission standards with digital signature blocks.
+- **1-Click Export:** Download full itemized logs in **CSV / Excel** or trigger **PDF print generation**.
+- **Public Transparency Portal:** A shareable, read-only URL showing certified expenditures to constituents, journalists, and oversight institutions while safeguarding private staff communications.
+- **Immutable Audit Trail:** Append-only cryptographic activity log recording every creation, approval, rejection, and alert.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework:** [Next.js 16](https://nextjs.org/) (App Router & Turbopack)
+- **Language:** TypeScript 5
+- **Styling:** Tailwind CSS 4
+- **ORM & Database:** [Prisma 6](https://www.prisma.io/) + PostgreSQL
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Validation:** [Zod](https://zod.dev/)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ installed
+- npm or yarn
+
+### Installation
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/kim425716-dotcom/poliledger.git
+cd poliledger
+
+# 2. Install dependencies
+npm install
+
+# 3. Generate Prisma client
+npx prisma generate
+
+# 4. Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔒 Security & Data Privacy
 
-## Learn More
+- **Immutable Audit Logging:** Financial records are append-only; soft deletes are enforced.
+- **Separation of Duties:** Submitting staff cannot approve their own expense claims.
+- **Data Minimization:** Public transparency views strip vendor contact information, attendee PII, and internal notes.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📄 License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License. Developed for political transparency and campaign accountability.
