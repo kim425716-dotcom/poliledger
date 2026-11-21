@@ -1,0 +1,84 @@
+# ==============================================================================
+# PoliLedger — Auto-Deploy to cPanel via FTP
+# ==============================================================================
+#
+# Triggers:
+#   • Push to `main` branch
+#   • Manual trigger via GitHub Actions (workflow_dispatch)
+#
+# Required GitHub Secrets (Settings → Secrets and variables → Actions):
+#   FTP_HOST              — FTP hostname (default: logictech.co.ke)
+#   FTP_USERNAME          — cPanel FTP username
+#   FTP_PASSWORD          — cPanel FTP password
+#   DEPLOY_PATH_PROD      — Remote folder path (default: /public_html/poliledger/)
+# ==============================================================================
+
+name: 🚀 Deploy PoliLedger to cPanel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to cPanel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: ⚙️ Generate Prisma client
+        run: npx prisma generate
+
+      - name: 🏗️ Build static export
+        run: npm run build
+
+      - name: 📄 Ensure .htaccess is in distribution folder
+        run: |
+          if [ -f out/.htaccess ]; then
+            echo ".htaccess already present in out/"
+          elif [ -f .htaccess ]; then
+            cp .htaccess out/.htaccess
+          fi
+
+      - name: 🚀 Deploy via FTP to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST || 'logictech.co.ke' }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: out/
+          server-dir: ${{ secrets.DEPLOY_PATH_PROD || '/public_html/poliledger/' }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+
+      - name: 📊 Deployment summary
+        if: success()
+        run: |
+          echo "### 🚀 PoliLedger Deployed to cPanel!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target Folder** | \`${{ secrets.DEPLOY_PATH_PROD || '/public_html/poliledger/' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Deployed by** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
