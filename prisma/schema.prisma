@@ -1,0 +1,268 @@
+// PoliLedger - Political Expense Tracking System
+// Prisma Schema Definition
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────
+
+enum Role {
+  POLITICIAN
+  CAMPAIGN_MANAGER
+  STAFF
+  AUDITOR
+  ADMIN
+}
+
+enum EventType {
+  MEETING
+  RALLY
+  FUNDRAISER
+  PRESS_CONFERENCE
+  OTHER
+}
+
+enum EventStatus {
+  PLANNED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REIMBURSED
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+  NEEDS_REVISION
+}
+
+// ─── MODELS ──────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  fullName      String
+  phone         String?
+  passwordHash  String
+  avatarUrl     String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  workspaces    UserWorkspace[]
+  expenses      Expense[]       @relation("CreatedByUser")
+  approvals     Approval[]      @relation("ReviewedByUser")
+  events        Event[]         @relation("EventCreatedBy")
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  currencyDefault     String   @default("KES")
+  publicTransparency  Boolean  @default(false)
+  description         String?
+  logoUrl             String?
+  settings            Json     @default("{}")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  members    UserWorkspace[]
+  events     Event[]
+  expenses   Expense[]
+  categories Category[]
+  budgets    Budget[]
+  auditLogs  AuditLog[]
+
+  @@map("workspaces")
+}
+
+model UserWorkspace {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role     @default(STAFF)
+  joinedAt    DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@map("user_workspaces")
+}
+
+model Event {
+  id                 String      @id @default(cuid())
+  workspaceId        String
+  name               String
+  description        String?
+  eventType          EventType   @default(OTHER)
+  eventDate          DateTime
+  startTime          String?
+  endTime            String?
+  locationName       String?
+  locationAddress    String?
+  latitude           Float?
+  longitude          Float?
+  expectedAttendance Int?
+  actualAttendance   Int?
+  status             EventStatus @default(PLANNED)
+  createdById        String
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Relations
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("EventCreatedBy", fields: [createdById], references: [id])
+  expenses  Expense[]
+  budgets   Budget[]
+
+  @@index([workspaceId, eventDate(sort: Desc)])
+  @@map("events")
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String
+  icon        String  @default("📁")
+  colorHex    String  @default("#6B7280")
+  isDefault   Boolean @default(false)
+  sortOrder   Int     @default(0)
+
+  // Relations
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  expenses  Expense[]
+  budgets   Budget[]
+
+  @@unique([workspaceId, name])
+  @@map("categories")
+}
+
+model Expense {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  eventId      String?
+  categoryId   String
+  createdById  String
+  expenseDate  DateTime
+  description  String
+  notes        String?
+  amount       Float
+  currency     String        @default("KES")
+  amountBase   Float?
+  exchangeRate Float?        @default(1.0)
+  vendorName   String?
+  location     String?
+  status       ExpenseStatus @default(DRAFT)
+  isRecurring  Boolean       @default(false)
+  metadata     Json          @default("{}")
+  deletedAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relations
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  event     Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  category  Category   @relation(fields: [categoryId], references: [id])
+  createdBy User       @relation("CreatedByUser", fields: [createdById], references: [id])
+  receipts  Receipt[]
+  approvals Approval[]
+
+  @@index([workspaceId, expenseDate(sort: Desc)])
+  @@index([eventId])
+  @@index([categoryId])
+  @@index([workspaceId, status])
+  @@map("expenses")
+}
+
+model Receipt {
+  id           String   @id @default(cuid())
+  expenseId    String
+  fileName     String
+  fileUrl      String
+  fileType     String
+  fileSizeBytes Int
+  storageKey   String
+  uploadedAt   DateTime @default(now())
+
+  // Relations
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
+}
+
+model Budget {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  eventId          String?
+  categoryId       String?
+  limitAmount      Float
+  currency         String   @default("KES")
+  alertThresholdPct Float   @default(75.0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  event     Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category  Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("budgets")
+}
+
+model Approval {
+  id         String           @id @default(cuid())
+  expenseId  String
+  reviewerId String
+  decision   ApprovalDecision
+  comment    String?
+  decidedAt  DateTime         @default(now())
+
+  // Relations
+  expense  Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  reviewer User    @relation("ReviewedByUser", fields: [reviewerId], references: [id])
+
+  @@map("approvals")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  action      String    // e.g. "expense.created", "expense.approved"
+  entityType  String    // e.g. "expense", "event"
+  entityId    String
+  changes     Json      @default("{}")
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
