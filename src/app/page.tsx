@@ -18,6 +18,10 @@ import { ReportGenerator } from "@/components/reports/ReportGenerator";
 import { PublicTransparencyView } from "@/components/transparency/PublicTransparencyView";
 import { AuditTrailView } from "@/components/audit/AuditTrailView";
 import { BudgetManager } from "@/components/budgets/BudgetManager";
+import { SecurityCenterView } from "@/components/security/SecurityCenterView";
+import { SessionLockModal } from "@/components/security/SessionLockModal";
+import { TwoFactorModal } from "@/components/security/TwoFactorModal";
+import { SecurityViolationModal } from "@/components/security/SecurityViolationModal";
 
 export default function Home() {
   const { activeTab } = useApp();
@@ -61,6 +65,8 @@ export default function Home() {
           {activeTab === "transparency" && <PublicTransparencyView />}
 
           {activeTab === "audit" && <AuditTrailView />}
+
+          {activeTab === "security" && <SecurityCenterView />}
         </main>
       </div>
 
@@ -69,6 +75,9 @@ export default function Home() {
       <ReceiptViewerModal />
       <EventDetailModal />
       <EventFormModal />
+      <SessionLockModal />
+      <TwoFactorModal />
+      <SecurityViolationModal />
     </div>
   );
 }

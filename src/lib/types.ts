@@ -165,3 +165,39 @@ export interface PaginatedResponse<T> {
   pageSize: number;
   totalPages: number;
 }
+
+// ─── SECURITY & AUDIT TYPES ──────────────────────────────────────────
+
+export interface SecuritySettings {
+  twoFactorEnabled: boolean;
+  separationOfDuties: boolean;
+  sessionTimeoutMinutes: number;
+  require2FAForLargeExpenses: boolean;
+  largeExpenseThreshold: number;
+  piiMaskingEnabled: boolean;
+  tamperProtectionActive: boolean;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  actorId: string;
+  actorName: string;
+  actorRole: Role | "SYSTEM";
+  action: string;
+  entityId: string;
+  entityName: string;
+  details: string;
+  ipAddress: string;
+  hash: string;
+  status: "VERIFIED" | "ALERT" | "REJECTED" | "LOGGED";
+}
+
+export interface LedgerIntegrityReport {
+  isValid: boolean;
+  totalRecordsChecked: number;
+  validRecordsCount: number;
+  tamperedRecords: string[];
+  lastScannedAt: string;
+  merkleRoot: string;
+}

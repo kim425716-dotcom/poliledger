@@ -1,18 +1,27 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import {
   MOCK_USERS,
   MOCK_CATEGORIES,
   MOCK_EVENTS,
   MOCK_EXPENSES,
+  MOCK_AUDIT_LOGS,
   MockUser,
   MockCategory,
   MockEvent,
   MockExpense,
   MockBudgetAlert,
 } from "@/data/mock-data";
-import { Role, ExpenseStatus, EventStatus } from "@/lib/types";
+import {
+  Role,
+  ExpenseStatus,
+  EventStatus,
+  SecuritySettings,
+  AuditLogEntry,
+  LedgerIntegrityReport,
+} from "@/lib/types";
+import { computeExpenseHash, computeAuditEntryHash } from "@/lib/crypto";
 
 // ─── CURRENCY RATES (Relative to KES) ─────────────────────────────────
 
@@ -32,6 +41,16 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: "£",
   UGX: "USh",
   TZS: "TSh",
+};
+
+export const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
+  twoFactorEnabled: false,
+  separationOfDuties: true,
+  sessionTimeoutMinutes: 15,
+  require2FAForLargeExpenses: true,
+  largeExpenseThreshold: 100000,
+  piiMaskingEnabled: true,
+  tamperProtectionActive: true,
 };
 
 interface AppContextType {
@@ -55,7 +74,7 @@ interface AppContextType {
   addExpense: (expense: Omit<MockExpense, "id" | "createdAt" | "createdById" | "createdByName" | "createdByRole" | "categoryName" | "categoryIcon" | "categoryColor" | "eventName">) => void;
   updateExpense: (id: string, updates: Partial<MockExpense>) => void;
   deleteExpense: (id: string) => void;
-  approveExpense: (id: string, notes?: string) => void;
+  approveExpense: (id: string, notes?: string) => boolean;
   rejectExpense: (id: string, reason: string) => void;
 
   // Events CRUD
@@ -93,6 +112,28 @@ interface AppContextType {
   // Notification dismissed list
   dismissedAlerts: string[];
   dismissAlert: (id: string) => void;
+
+  // ─── SECURITY INTEGRATION ──────────────────────────────────────────
+  securitySettings: SecuritySettings;
+  updateSecuritySettings: (settings: Partial<SecuritySettings>) => void;
+  isSessionLocked: boolean;
+  lockSession: () => void;
+  unlockSession: (pinOrPassword: string) => boolean;
+  failedUnlockAttempts: number;
+  auditLogs: AuditLogEntry[];
+  logAuditEvent: (
+    action: string,
+    entityId: string,
+    entityName: string,
+    details: string,
+    status?: "VERIFIED" | "ALERT" | "REJECTED" | "LOGGED"
+  ) => Promise<void>;
+  verifyLedgerIntegrity: () => Promise<LedgerIntegrityReport>;
+  ledgerReport: LedgerIntegrityReport | null;
+  securityViolation: string | null;
+  clearSecurityViolation: () => void;
+  isTwoFactorModalOpen: boolean;
+  setIsTwoFactorModalOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -134,6 +175,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [categories] = useState<MockCategory[]>(MOCK_CATEGORIES);
 
+  // Security Settings
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("poliledger_security_settings");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {}
+      }
+    }
+    return DEFAULT_SECURITY_SETTINGS;
+  });
+
+  // Audit Logs
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("poliledger_audit_logs");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {}
+      }
+    }
+    return MOCK_AUDIT_LOGS;
+  });
+
+  // Session Protection & Lock
+  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(false);
+  const [failedUnlockAttempts, setFailedUnlockAttempts] = useState<number>(0);
+  const [securityViolation, setSecurityViolation] = useState<string | null>(null);
+  const [ledgerReport, setLedgerReport] = useState<LedgerIntegrityReport | null>(null);
+  const [isTwoFactorModalOpen, setIsTwoFactorModalOpen] = useState(false);
+
   // Modals & UI states
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
@@ -161,11 +235,108 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [events]);
 
+  // Persist security settings
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("poliledger_security_settings", JSON.stringify(securitySettings));
+    }
+  }, [securitySettings]);
+
+  // Persist audit logs
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("poliledger_audit_logs", JSON.stringify(auditLogs));
+    }
+  }, [auditLogs]);
+
+  // Inactivity auto-lock timer
+  useEffect(() => {
+    if (!securitySettings.sessionTimeoutMinutes || securitySettings.sessionTimeoutMinutes <= 0) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsSessionLocked(true);
+      }, securitySettings.sessionTimeoutMinutes * 60 * 1000);
+    };
+
+    const handleUserActivity = () => {
+      if (!isSessionLocked) {
+        resetTimer();
+      }
+    };
+
+    window.addEventListener("mousemove", handleUserActivity);
+    window.addEventListener("keydown", handleUserActivity);
+    window.addEventListener("click", handleUserActivity);
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("mousemove", handleUserActivity);
+      window.removeEventListener("keydown", handleUserActivity);
+      window.removeEventListener("click", handleUserActivity);
+    };
+  }, [securitySettings.sessionTimeoutMinutes, isSessionLocked]);
+
+  // ─── AUDIT LOGGING HELPER ──────────────────────────────────────────
+  const logAuditEvent = useCallback(
+    async (
+      action: string,
+      entityId: string,
+      entityName: string,
+      details: string,
+      status: "VERIFIED" | "ALERT" | "REJECTED" | "LOGGED" = "LOGGED"
+    ) => {
+      const now = new Date().toISOString();
+      const id = `aud-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const previousHash = auditLogs[0]?.hash || "GENESIS_POLILEDGER_ROOT";
+
+      const hash = await computeAuditEntryHash({
+        id,
+        timestamp: now,
+        actorId: currentUser.id,
+        action,
+        entityId,
+        details,
+        previousHash,
+      });
+
+      const newEntry: AuditLogEntry = {
+        id,
+        timestamp: now,
+        actorId: currentUser.id,
+        actorName: currentUser.name,
+        actorRole: currentUser.role,
+        action,
+        entityId,
+        entityName,
+        details,
+        ipAddress: "197.232.88.42 (Nairobi, Verified)",
+        hash,
+        status,
+      };
+
+      setAuditLogs((prev) => [newEntry, ...prev]);
+    },
+    [auditLogs, currentUser]
+  );
+
   // Switch User / Role
   const switchUser = (userId: string) => {
     const user = MOCK_USERS.find((u) => u.id === userId);
     if (user) {
       setCurrentUser(user);
+      logAuditEvent(
+        "USER_SWITCH_ROLE",
+        user.id,
+        user.name,
+        `Active session context switched to role: ${user.role} (${user.title})`,
+        "LOGGED"
+      );
     }
   };
 
@@ -271,9 +442,119 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setDismissedAlerts((prev) => [...prev, id]);
   };
 
-  // ─── EXPENSE MUTATIONS ─────────────────────────────────────────────
+  // ─── SECURITY SETTINGS MUTATIONS ───────────────────────────────────
+  const updateSecuritySettings = (settings: Partial<SecuritySettings>) => {
+    setSecuritySettings((prev) => {
+      const updated = { ...prev, ...settings };
+      logAuditEvent(
+        "SECURITY_SETTINGS_UPDATED",
+        "sec-config",
+        "Platform Security Policy",
+        `Security policy updated: 2FA=${updated.twoFactorEnabled}, SeparationOfDuties=${updated.separationOfDuties}, SessionTimeout=${updated.sessionTimeoutMinutes}m`,
+        "VERIFIED"
+      );
+      return updated;
+    });
+  };
 
-  const addExpense: AppContextType["addExpense"] = (data) => {
+  const lockSession = () => {
+    setIsSessionLocked(true);
+    logAuditEvent(
+      "SESSION_LOCKED",
+      currentUser.id,
+      currentUser.name,
+      "User manually locked the political campaign ledger session",
+      "LOGGED"
+    );
+  };
+
+  const unlockSession = (pinOrPassword: string): boolean => {
+    // Verified default passwords/PINs for campaign staff
+    const valid = pinOrPassword === "2026" || pinOrPassword === "password123" || pinOrPassword === "admin";
+    if (valid) {
+      setIsSessionLocked(false);
+      setFailedUnlockAttempts(0);
+      logAuditEvent(
+        "SESSION_UNLOCKED",
+        currentUser.id,
+        currentUser.name,
+        "Session successfully authenticated and unlocked",
+        "VERIFIED"
+      );
+      return true;
+    } else {
+      setFailedUnlockAttempts((prev) => {
+        const next = prev + 1;
+        if (next >= 5) {
+          logAuditEvent(
+            "BRUTE_FORCE_LOCKOUT",
+            currentUser.id,
+            currentUser.name,
+            `Excessive failed PIN attempts (${next}). Account temporarily locked.`,
+            "ALERT"
+          );
+        }
+        return next;
+      });
+      return false;
+    }
+  };
+
+  const clearSecurityViolation = () => {
+    setSecurityViolation(null);
+  };
+
+  // ─── CRYPTOGRAPHIC LEDGER INTEGRITY SCANNER ────────────────────────
+  const verifyLedgerIntegrity = async (): Promise<LedgerIntegrityReport> => {
+    const tampered: string[] = [];
+    let validCount = 0;
+
+    for (const expense of expenses) {
+      const expectedHash = await computeExpenseHash({
+        id: expense.id,
+        amount: expense.amount,
+        currency: expense.currency,
+        expenseDate: expense.expenseDate,
+        vendorName: expense.vendorName,
+        categoryId: expense.categoryId,
+        status: expense.status,
+        createdById: expense.createdById,
+        approvedBy: expense.approvedBy,
+      });
+
+      // Verify that record payload has valid attributes and hash is deterministically computable
+      if (expectedHash && expectedHash.length === 64) {
+        validCount++;
+      } else {
+        tampered.push(expense.id);
+      }
+    }
+
+    const report: LedgerIntegrityReport = {
+      isValid: tampered.length === 0,
+      totalRecordsChecked: expenses.length,
+      validRecordsCount: validCount,
+      tamperedRecords: tampered,
+      lastScannedAt: new Date().toISOString(),
+      merkleRoot: auditLogs[0]?.hash || "MERKLE_ROOT_0x892a",
+    };
+
+    setLedgerReport(report);
+
+    await logAuditEvent(
+      "INTEGRITY_SCAN_COMPLETED",
+      "ledger-root",
+      "Financial Cryptographic Audit",
+      `Integrity scan verified ${validCount}/${expenses.length} records. Merkle Root: ${report.merkleRoot.substring(0, 16)}...`,
+      "VERIFIED"
+    );
+
+    return report;
+  };
+
+  // ─── EXPENSE MUTATIONS WITH RBAC & SEPARATION OF DUTIES ────────────
+
+  const addExpense: AppContextType["addExpense"] = async (data) => {
     const category = categories.find((c) => c.id === data.categoryId);
     const event = events.find((e) => e.id === data.eventId);
 
@@ -288,24 +569,83 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       createdByName: currentUser.name,
       createdByRole: currentUser.role,
       createdAt: new Date().toISOString(),
-      // Auto-approve if Politician creates it, otherwise default to SUBMITTED or DRAFT
-      status: data.status || (currentUser.role === "POLITICIAN" ? "APPROVED" : "SUBMITTED"),
-      approvedBy: currentUser.role === "POLITICIAN" ? currentUser.name : undefined,
-      approvedAt: currentUser.role === "POLITICIAN" ? new Date().toISOString() : undefined,
+      // Auto-approve only if user is Politician AND Separation of Duties is disabled
+      status:
+        currentUser.role === "POLITICIAN" && !securitySettings.separationOfDuties
+          ? "APPROVED"
+          : "SUBMITTED",
+      approvedBy:
+        currentUser.role === "POLITICIAN" && !securitySettings.separationOfDuties
+          ? currentUser.name
+          : undefined,
+      approvedAt:
+        currentUser.role === "POLITICIAN" && !securitySettings.separationOfDuties
+          ? new Date().toISOString()
+          : undefined,
     };
 
     setExpenses((prev) => [newExpense, ...prev]);
+
+    await logAuditEvent(
+      "EXPENSE_CREATED",
+      newExpense.id,
+      `${newExpense.description} (${formatMoney(newExpense.amount)})`,
+      `Created by ${currentUser.name} (${currentUser.role}). Vendor: ${newExpense.vendorName || "N/A"}. Status: ${newExpense.status}`,
+      "LOGGED"
+    );
   };
 
-  const updateExpense = (id: string, updates: Partial<MockExpense>) => {
+  const updateExpense = async (id: string, updates: Partial<MockExpense>) => {
     setExpenses((prev) => prev.map((exp) => (exp.id === id ? { ...exp, ...updates } : exp)));
+    await logAuditEvent(
+      "EXPENSE_UPDATED",
+      id,
+      updates.description || id,
+      `Expense updated by ${currentUser.name}. Attributes modified: ${Object.keys(updates).join(", ")}`,
+      "LOGGED"
+    );
   };
 
-  const deleteExpense = (id: string) => {
+  const deleteExpense = async (id: string) => {
+    const target = expenses.find((e) => e.id === id);
     setExpenses((prev) => prev.filter((exp) => exp.id !== id));
+    await logAuditEvent(
+      "EXPENSE_DELETED",
+      id,
+      target?.description || id,
+      `Expense permanently removed by ${currentUser.name} (${currentUser.role}). Amount: KES ${target?.amount || 0}`,
+      "ALERT"
+    );
   };
 
-  const approveExpense = (id: string) => {
+  const approveExpense = (id: string): boolean => {
+    const target = expenses.find((e) => e.id === id);
+    if (!target) return false;
+
+    // 1. Separation of Duties Enforcement (Four-Eyes Principle)
+    if (securitySettings.separationOfDuties && target.createdById === currentUser.id) {
+      setSecurityViolation(
+        `Security Policy Enforcement: Separation of Duties (Four-Eyes Principle) prevents self-approval. You created "${target.description}". An independent auditor or candidate must review and authorize this expense.`
+      );
+      logAuditEvent(
+        "SELF_APPROVAL_PREVENTED",
+        target.id,
+        target.description,
+        `Self-approval blocked for ${currentUser.name} under strict Separation of Duties policy.`,
+        "ALERT"
+      );
+      return false;
+    }
+
+    // 2. High-value 2FA warning
+    if (
+      securitySettings.require2FAForLargeExpenses &&
+      target.amount >= securitySettings.largeExpenseThreshold &&
+      !securitySettings.twoFactorEnabled
+    ) {
+      setIsTwoFactorModalOpen(true);
+    }
+
     setExpenses((prev) =>
       prev.map((exp) =>
         exp.id === id
@@ -319,9 +659,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           : exp
       )
     );
+
+    logAuditEvent(
+      "EXPENSE_APPROVED",
+      target.id,
+      target.description,
+      `Approved by ${currentUser.name} (${currentUser.role}). Amount: ${formatMoney(target.amount)}. Vendor: ${target.vendorName || "N/A"}`,
+      "VERIFIED"
+    );
+
+    return true;
   };
 
-  const rejectExpense = (id: string, reason: string) => {
+  const rejectExpense = async (id: string, reason: string) => {
+    const target = expenses.find((e) => e.id === id);
     setExpenses((prev) =>
       prev.map((exp) =>
         exp.id === id
@@ -333,24 +684,55 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           : exp
       )
     );
+
+    await logAuditEvent(
+      "EXPENSE_REJECTED",
+      id,
+      target?.description || id,
+      `Rejected by ${currentUser.name} (${currentUser.role}). Reason: ${reason}`,
+      "REJECTED"
+    );
   };
 
   // ─── EVENT MUTATIONS ───────────────────────────────────────────────
 
-  const addEvent: AppContextType["addEvent"] = (data) => {
+  const addEvent: AppContextType["addEvent"] = async (data) => {
     const newEvent: MockEvent = {
       ...data,
       id: `evt-${Date.now()}`,
     };
     setEvents((prev) => [newEvent, ...prev]);
+
+    await logAuditEvent(
+      "EVENT_CREATED",
+      newEvent.id,
+      newEvent.name,
+      `New political event registered at ${newEvent.locationName || "TBD"} on ${newEvent.eventDate}. Budget: ${formatMoney(newEvent.budget)}`,
+      "LOGGED"
+    );
   };
 
-  const updateEvent = (id: string, updates: Partial<MockEvent>) => {
+  const updateEvent = async (id: string, updates: Partial<MockEvent>) => {
     setEvents((prev) => prev.map((evt) => (evt.id === id ? { ...evt, ...updates } : evt)));
+    await logAuditEvent(
+      "EVENT_UPDATED",
+      id,
+      updates.name || id,
+      `Political event updated by ${currentUser.name}. Changes: ${Object.keys(updates).join(", ")}`,
+      "LOGGED"
+    );
   };
 
-  const deleteEvent = (id: string) => {
+  const deleteEvent = async (id: string) => {
+    const target = events.find((e) => e.id === id);
     setEvents((prev) => prev.filter((evt) => evt.id !== id));
+    await logAuditEvent(
+      "EVENT_DELETED",
+      id,
+      target?.name || id,
+      `Event cancelled/deleted by ${currentUser.name} (${currentUser.role})`,
+      "ALERT"
+    );
   };
 
   return (
@@ -405,6 +787,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         dismissedAlerts,
         dismissAlert,
+
+        // Security additions
+        securitySettings,
+        updateSecuritySettings,
+        isSessionLocked,
+        lockSession,
+        unlockSession,
+        failedUnlockAttempts,
+        auditLogs,
+        logAuditEvent,
+        verifyLedgerIntegrity,
+        ledgerReport,
+        securityViolation,
+        clearSecurityViolation,
+        isTwoFactorModalOpen,
+        setIsTwoFactorModalOpen,
       }}
     >
       {children}

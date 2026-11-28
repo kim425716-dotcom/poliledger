@@ -1,4 +1,4 @@
-# PoliLedger - cPanel Apache Configuration
+# PoliLedger - cPanel Apache Configuration & Production Security Hardening
 # Optimized for Next.js Static Export in /poliledger subdirectory
 
 <IfModule mod_rewrite.c>
@@ -45,13 +45,40 @@
   ExpiresByType font/woff2 "access plus 1 year"
 </IfModule>
 
-# ─── SECURITY HEADERS ────────────────────────────────────────────────
+# ─── SECURITY HEADERS & DEFENSE-IN-DEPTH ───────────────────────────────
 <IfModule mod_headers.c>
+  # 1. Prevent MIME-sniffing
   Header set X-Content-Type-Options "nosniff"
+
+  # 2. Clickjacking protection
   Header set X-Frame-Options "SAMEORIGIN"
+
+  # 3. Cross-site scripting filter
   Header set X-XSS-Protection "1; mode=block"
+
+  # 4. Referrer policy
   Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # 5. Strict Transport Security (HSTS - 1 Year Preloaded)
+  Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+  # 6. Restrict hardware API access
+  Header set Permissions-Policy "camera=(), microphone=(), payment=()"
+
+  # 7. Content Security Policy (CSP)
+  Header set Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; img-src 'self' https: data: blob:; font-src 'self' https: data:; frame-ancestors 'self';"
 </IfModule>
+
+# ─── ACCESS RESTRICTIONS & FILE SHIELD ────────────────────────────────
+# Deny access to hidden dotfiles (e.g. .git, .env)
+<FilesMatch "^\.(?!well-known)">
+  Require all denied
+</FilesMatch>
+
+# Block executable script execution in static directory
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|cgi|pl|py|sh|bash)$">
+  Require all denied
+</FilesMatch>
 
 # ─── MIME TYPES ──────────────────────────────────────────────────────
 <IfModule mod_mime.c>

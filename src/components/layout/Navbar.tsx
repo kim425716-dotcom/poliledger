@@ -13,6 +13,8 @@ import {
   FileCheck2,
   AlertTriangle,
   X,
+  Lock,
+  ShieldCheck,
 } from "lucide-react";
 
 export const Navbar = () => {
@@ -27,6 +29,7 @@ export const Navbar = () => {
     expenses,
     setIsAddExpenseOpen,
     setActiveTab,
+    lockSession,
   } = useApp();
 
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -101,6 +104,15 @@ export const Navbar = () => {
         >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Log Expense</span>
+        </button>
+
+        {/* Lock Workspace Button */}
+        <button
+          onClick={lockSession}
+          className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors hidden sm:block"
+          title="Lock Session (Security)"
+        >
+          <Lock className="h-4 w-4 text-gray-500" />
         </button>
 
         {/* Notifications / Alerts Bell */}
@@ -267,6 +279,30 @@ export const Navbar = () => {
                     </div>
                   </button>
                 ))}
+              </div>
+
+              {/* Security Center & Lock Action */}
+              <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-xs px-2">
+                <button
+                  onClick={() => {
+                    setActiveTab("security");
+                    setIsRoleDropdownOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 font-semibold text-blue-600 hover:text-blue-800"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>Security Center</span>
+                </button>
+                <button
+                  onClick={() => {
+                    lockSession();
+                    setIsRoleDropdownOpen(false);
+                  }}
+                  className="flex items-center gap-1 text-gray-500 hover:text-gray-800 font-medium"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Lock</span>
+                </button>
               </div>
             </div>
           )}

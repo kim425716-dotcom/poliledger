@@ -66,6 +66,13 @@ export const Sidebar = () => {
       icon: History,
       badge: null,
     },
+    {
+      id: "security",
+      label: "Security Center",
+      icon: ShieldCheck,
+      badge: "A+",
+      badgeColor: "bg-emerald-100 text-emerald-800",
+    },
   ];
 
   return (
