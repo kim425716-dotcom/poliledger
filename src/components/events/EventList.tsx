@@ -3,18 +3,12 @@
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils";
-import { MockEvent } from "@/data/mock-data";
 import {
   CalendarDays,
   Plus,
   Users,
   MapPin,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  ExternalLink,
   ChevronRight,
-  TrendingUp,
 } from "lucide-react";
 
 export const EventList = () => {
@@ -50,6 +44,7 @@ export const EventList = () => {
         <div className="flex items-center gap-3">
           {canCreate && (
             <button
+              type="button"
               onClick={() => setIsAddEventOpen(true)}
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 transition-all active:scale-95"
             >
@@ -62,11 +57,12 @@ export const EventList = () => {
 
       {/* Type Filter Pills */}
       <div className="flex gap-2 overflow-x-auto pb-1 text-xs">
-        {["ALL", "RALLY", "MEETING", "PRESS_CONFERENCE", "FUNDRAISER"].map((t) => (
+        {["ALL", "RALLY", "MEETING", "PRESS_CONFERENCE", "FUNDRAISER", "OTHER"].map((t) => (
           <button
+            type="button"
             key={t}
             onClick={() => setFilterType(t)}
-            className={`rounded-lg px-3 py-1.5 font-semibold transition-colors ${
+            className={`rounded-lg px-3 py-1.5 font-semibold transition-colors whitespace-nowrap ${
               filterType === t
                 ? "bg-blue-600 text-white shadow-xs"
                 : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -175,6 +171,7 @@ export const EventList = () => {
                     <strong>{eventExpenses.length}</strong> linked expenditures
                   </span>
                   <button
+                    type="button"
                     onClick={() => setSelectedEventDetail(evt)}
                     className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                   >
@@ -186,6 +183,12 @@ export const EventList = () => {
             </div>
           );
         })}
+
+        {filteredEvents.length === 0 && (
+          <div className="col-span-full rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-10 text-center text-xs text-gray-500 dark:text-gray-400">
+            No {filterType === "ALL" ? "" : filterType.toLowerCase().replace("_", " ")} events scheduled yet. Click &ldquo;Schedule Event / Rally&rdquo; to add one.
+          </div>
+        )}
       </div>
     </div>
   );

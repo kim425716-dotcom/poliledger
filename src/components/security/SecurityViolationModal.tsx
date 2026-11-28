@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useApp } from "@/context/AppContext";
-import { ShieldAlert, X, AlertTriangle, ArrowRight } from "lucide-react";
+import { ShieldAlert, X, ArrowRight } from "lucide-react";
 
 export const SecurityViolationModal = () => {
   const { securityViolation, clearSecurityViolation, setActiveTab } = useApp();

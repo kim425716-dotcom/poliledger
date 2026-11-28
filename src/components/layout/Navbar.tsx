@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useApp, CURRENCY_SYMBOLS } from "@/context/AppContext";
 import { ROLE_LABELS } from "@/lib/types";
 import { getCampaignAccentClasses, getNameInitials } from "@/lib/campaign-theme";
@@ -44,8 +44,10 @@ export const Navbar = () => {
     setSelectedCurrency,
     budgetAlerts,
     dismissedAlerts,
+    dismissAlert,
     expenses,
     setIsAddExpenseOpen,
+    setSelectedStatusFilter,
     activeTab,
     setActiveTab,
     lockSession,
@@ -58,6 +60,27 @@ export const Navbar = () => {
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Refs for click-outside detection
+  const campaignDropdownRef = useRef<HTMLDivElement>(null);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
+  const alertsDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (campaignDropdownRef.current && !campaignDropdownRef.current.contains(e.target as Node)) {
+        setIsCampaignDropdownOpen(false);
+      }
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
+        setIsRoleDropdownOpen(false);
+      }
+      if (alertsDropdownRef.current && !alertsDropdownRef.current.contains(e.target as Node)) {
+        setIsAlertsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const activeAlerts = budgetAlerts.filter((a) => !dismissedAlerts.includes(a.id));
   const pendingCount = expenses.filter((e) => e.status === "SUBMITTED").length;
@@ -129,7 +152,7 @@ export const Navbar = () => {
             </div>
 
             {/* Politician / Campaign Switcher Button */}
-            <div className="relative">
+            <div className="relative" ref={campaignDropdownRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -188,6 +211,7 @@ export const Navbar = () => {
                           onClick={() => {
                             switchCampaign(camp.id);
                             setIsCampaignDropdownOpen(false);
+                            setActiveTab("dashboard");
                           }}
                           className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors ${
                             isCurrent
@@ -316,7 +340,7 @@ export const Navbar = () => {
           </button>
 
           {/* Notifications / Alerts Bell */}
-          <div className="relative">
+          <div className="relative" ref={alertsDropdownRef}>
             <button
               onClick={() => {
                 setIsAlertsOpen(!isAlertsOpen);
@@ -358,6 +382,7 @@ export const Navbar = () => {
                   {pendingCount > 0 && (
                     <div
                       onClick={() => {
+                        setSelectedStatusFilter("SUBMITTED");
                         setActiveTab("expenses");
                         setIsAlertsOpen(false);
                       }}
@@ -378,10 +403,14 @@ export const Navbar = () => {
                   {activeAlerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className={`flex items-start gap-3 rounded-lg border p-3 ${
+                      onClick={() => {
+                        setActiveTab("budgets");
+                        setIsAlertsOpen(false);
+                      }}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
                         alert.severity === "CRITICAL"
-                          ? "border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/40"
-                          : "border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/40"
+                          ? "border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/40 hover:bg-rose-100/70 dark:hover:bg-rose-950/60"
+                          : "border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/40 hover:bg-amber-100/70 dark:hover:bg-amber-950/60"
                       }`}
                     >
                       <AlertTriangle
@@ -391,7 +420,7 @@ export const Navbar = () => {
                             : "text-amber-600 dark:text-amber-400"
                         }`}
                       />
-                      <div className="text-xs">
+                      <div className="text-xs flex-1 min-w-0">
                         <p
                           className={`font-semibold ${
                             alert.severity === "CRITICAL"
@@ -411,6 +440,17 @@ export const Navbar = () => {
                           {alert.message}
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismissAlert(alert.id);
+                        }}
+                        className="rounded p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 shrink-0"
+                        title="Dismiss"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   ))}
 
@@ -425,7 +465,7 @@ export const Navbar = () => {
           </div>
 
           {/* Role Switcher Pill */}
-          <div className="relative">
+          <div className="relative" ref={roleDropdownRef}>
             <button
               onClick={() => {
                 setIsRoleDropdownOpen(!isRoleDropdownOpen);
@@ -593,16 +633,30 @@ export const Navbar = () => {
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setIsAddCampaignOpen(true);
-              }}
-              className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              <span>Add Politician</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  lockSession();
+                }}
+                className="flex items-center gap-1 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                <span>Lock</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsAddCampaignOpen(true);
+                }}
+                className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>Add Politician</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

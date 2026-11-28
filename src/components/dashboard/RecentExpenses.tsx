@@ -10,31 +10,37 @@ import {
   Clock,
   Check,
   X,
-  Eye,
   ExternalLink,
 } from "lucide-react";
 
 export const RecentExpenses = () => {
   const {
     expenses,
+    events,
     currentUser,
     approveExpense,
     rejectExpense,
     setSelectedReceiptExpense,
+    setSelectedEventDetail,
     formatMoney,
     setActiveTab,
   } = useApp();
 
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState(false);
 
   const canApprove = currentUser.role === "AUDITOR" || currentUser.role === "POLITICIAN" || currentUser.role === "ADMIN";
 
   const handleRejectSubmit = (id: string) => {
-    if (!rejectReason.trim()) return;
-    rejectExpense(id, rejectReason);
+    if (!rejectReason.trim()) {
+      setRejectError(true);
+      return;
+    }
+    rejectExpense(id, rejectReason.trim());
     setRejectingId(null);
     setRejectReason("");
+    setRejectError(false);
   };
 
   return (
@@ -91,9 +97,17 @@ export const RecentExpenses = () => {
                 {/* Linked Event */}
                 <td className="py-3 px-3 max-w-[160px]">
                   {exp.eventName ? (
-                    <span className="truncate block font-medium text-blue-700 dark:text-blue-400 hover:underline cursor-pointer">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const matchedEvent = events.find((ev) => ev.id === exp.eventId);
+                        if (matchedEvent) setSelectedEventDetail(matchedEvent);
+                      }}
+                      className="truncate block text-left font-medium text-blue-700 dark:text-blue-400 hover:underline cursor-pointer max-w-full"
+                      title={`Inspect event: ${exp.eventName}`}
+                    >
                       {exp.eventName}
-                    </span>
+                    </button>
                   ) : (
                     <span className="text-gray-400 dark:text-gray-500 italic">General Campaign</span>
                   )}
@@ -178,18 +192,34 @@ export const RecentExpenses = () => {
             <textarea
               rows={3}
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={(e) => {
+                setRejectReason(e.target.value);
+                if (rejectError) setRejectError(false);
+              }}
               placeholder="e.g. Receipt is blurry, missing procurement pre-authorization form, or exceeding budget allowance..."
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className={`w-full rounded-lg border bg-white dark:bg-gray-800 p-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
+                rejectError ? "border-rose-500" : "border-gray-300 dark:border-gray-700"
+              }`}
             />
+            {rejectError && (
+              <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                Please enter a rejection reason before submitting.
+              </p>
+            )}
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setRejectingId(null)}
+                type="button"
+                onClick={() => {
+                  setRejectingId(null);
+                  setRejectReason("");
+                  setRejectError(false);
+                }}
                 className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => handleRejectSubmit(rejectingId)}
                 className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 shadow-xs"
               >

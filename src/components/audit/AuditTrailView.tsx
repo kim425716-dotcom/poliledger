@@ -2,15 +2,12 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
+import { copyToClipboard } from "@/lib/utils";
 import {
-  History,
   ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
   UserCheck,
   Fingerprint,
   Search,
-  Filter,
   Copy,
   Check,
 } from "lucide-react";
@@ -31,8 +28,8 @@ export const AuditTrailView = () => {
     return matchesSearch && matchesRole;
   });
 
-  const handleCopyHash = (hash: string, id: string) => {
-    navigator.clipboard.writeText(hash);
+  const handleCopyHash = async (hash: string, id: string) => {
+    await copyToClipboard(hash);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };

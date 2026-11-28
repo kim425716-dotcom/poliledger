@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { Shield, Lock, KeyRound, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Lock, KeyRound, AlertCircle } from "lucide-react";
 
 export const SessionLockModal = () => {
   const { currentUser, activeCampaign, isSessionLocked, unlockSession, failedUnlockAttempts } = useApp();

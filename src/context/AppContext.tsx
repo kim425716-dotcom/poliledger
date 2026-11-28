@@ -137,6 +137,8 @@ interface AppContextType {
 
   // Categories & Budgets (scoped to active campaign)
   categories: MockCategory[];
+  updateCategoryLimit: (categoryId: string, budgetLimit: number) => void;
+  addCategory: (category: { name: string; icon: string; colorHex: string; budgetLimit: number }) => void;
   totalCampaignBudget: number;
   totalSpent: number;
   budgetAlerts: MockBudgetAlert[];
@@ -144,6 +146,8 @@ interface AppContextType {
   // UI state & Modals
   isAddExpenseOpen: boolean;
   setIsAddExpenseOpen: (open: boolean) => void;
+  preselectedEventId: string;
+  openAddExpenseModal: (eventId?: string) => void;
   isAddEventOpen: boolean;
   setIsAddEventOpen: (open: boolean) => void;
   selectedReceiptExpense: MockExpense | null;
@@ -365,7 +369,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     getThemeSnapshot,
     getServerThemeSnapshot
   );
-  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isAddExpenseOpen, setIsAddExpenseOpenState] = useState(false);
+  const [preselectedEventId, setPreselectedEventId] = useState("");
+  const setIsAddExpenseOpen = useCallback((open: boolean) => {
+    setIsAddExpenseOpenState(open);
+    if (!open) setPreselectedEventId("");
+  }, []);
+  const openAddExpenseModal = useCallback((eventId?: string) => {
+    setPreselectedEventId(eventId || "");
+    setIsAddExpenseOpenState(true);
+  }, []);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false);
   const [selectedReceiptExpense, setSelectedReceiptExpense] = useState<MockExpense | null>(null);
@@ -541,6 +554,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setSelectedCurrency(target.defaultCurrency || "KES");
       setSelectedReceiptExpense(null);
       setSelectedEventDetail(null);
+      setIsAddExpenseOpenState(false);
+      setPreselectedEventId("");
       setLedgerReport(null);
       setSearchQuery("");
       setSelectedCategoryFilter("ALL");
@@ -629,9 +644,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         title: "Certified Public Accountant & Compliance Officer",
       };
 
+      const budgetCapInKes = Math.round(
+        input.totalBudgetCap * (EXCHANGE_RATES[newCampaign.defaultCurrency] || 1)
+      );
+
       const initialWorkspace: CampaignWorkspaceData = {
         users: [politicianUser, managerUser, staffUser, auditorUser],
-        categories: createScaledCategories(input.totalBudgetCap),
+        categories: createScaledCategories(budgetCapInKes),
         events: [],
         expenses: [],
         auditLogs: [
@@ -1208,6 +1227,51 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  // ─── CATEGORY & BUDGET LIMIT MUTATIONS ────────────────────────────
+
+  const updateCategoryLimit = async (categoryId: string, budgetLimit: number) => {
+    const target = categories.find((c) => c.id === categoryId);
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      categories: ws.categories.map((cat) =>
+        cat.id === categoryId ? { ...cat, budgetLimit } : cat
+      ),
+    }));
+    await logAuditEvent(
+      "BUDGET_LIMIT_UPDATED",
+      categoryId,
+      target?.name || categoryId,
+      `Updated ceiling limit for ${target?.name || categoryId} to ${formatMoney(budgetLimit)}`,
+      "VERIFIED"
+    );
+  };
+
+  const addCategory = async (category: {
+    name: string;
+    icon: string;
+    colorHex: string;
+    budgetLimit: number;
+  }) => {
+    const newCat: MockCategory = {
+      id: `cat-${Date.now()}`,
+      name: category.name.trim(),
+      icon: category.icon || "📁",
+      colorHex: category.colorHex || "#3B82F6",
+      budgetLimit: category.budgetLimit,
+    };
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      categories: [...ws.categories, newCat],
+    }));
+    await logAuditEvent(
+      "BUDGET_CATEGORY_CREATED",
+      newCat.id,
+      newCat.name,
+      `Created budget category ${newCat.name} with ceiling ${formatMoney(newCat.budgetLimit)}`,
+      "LOGGED"
+    );
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1249,12 +1313,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteEvent,
 
         categories,
+        updateCategoryLimit,
+        addCategory,
         totalCampaignBudget,
         totalSpent,
         budgetAlerts,
 
         isAddExpenseOpen,
         setIsAddExpenseOpen,
+        preselectedEventId,
+        openAddExpenseModal,
         isAddEventOpen,
         setIsAddEventOpen,
         selectedReceiptExpense,

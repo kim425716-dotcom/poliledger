@@ -37,6 +37,7 @@ export const CampaignsOverviewView = () => {
 
   const [search, setSearch] = useState("");
   const [teamTargetCampaignId, setTeamTargetCampaignId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<Role>("STAFF");
@@ -418,22 +419,39 @@ export const CampaignsOverviewView = () => {
 
                 <div className="flex items-center gap-2">
                   {campaigns.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `Remove ${camp.politicianName}'s campaign workspace and its local ledger data?`
-                          )
-                        ) {
-                          deleteCampaign(camp.id);
-                        }
-                      }}
-                      className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                      title="Delete Campaign Workspace"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    confirmDeleteId === camp.id ? (
+                      <div className="flex items-center gap-1.5 rounded-lg border border-rose-200 dark:border-rose-800/70 bg-rose-50 dark:bg-rose-950/50 px-2 py-1">
+                        <span className="text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+                          Delete?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteCampaign(camp.id);
+                            setConfirmDeleteId(null);
+                          }}
+                          className="rounded bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white hover:bg-rose-700"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-0.5 text-[10px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(camp.id)}
+                        className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        title="Delete Campaign Workspace"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )
                   )}
 
                   <button

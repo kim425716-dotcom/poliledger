@@ -26,7 +26,7 @@ import { CampaignsOverviewView } from "@/components/campaigns/CampaignsOverviewV
 import { CampaignFormModal } from "@/components/campaigns/CampaignFormModal";
 
 export default function Home() {
-  const { activeTab } = useApp();
+  const { activeTab, activeCampaignId } = useApp();
 
   return (
     <div className="min-h-screen bg-gray-50/60 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 transition-colors">
@@ -62,9 +62,9 @@ export default function Home() {
 
           {activeTab === "events" && <EventList />}
 
-          {activeTab === "budgets" && <BudgetManager />}
+          {activeTab === "budgets" && <BudgetManager key={activeCampaignId} />}
 
-          {activeTab === "reports" && <ReportGenerator />}
+          {activeTab === "reports" && <ReportGenerator key={activeCampaignId} />}
 
           {activeTab === "transparency" && <PublicTransparencyView />}
 

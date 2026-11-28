@@ -4,20 +4,16 @@ import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import {
   ShieldCheck,
-  ShieldAlert,
   KeyRound,
   Lock,
   FileCheck2,
   RefreshCw,
   Download,
-  AlertTriangle,
   Fingerprint,
   Smartphone,
-  EyeOff,
   UserCheck,
   CheckCircle2,
   Sliders,
-  Sparkles,
 } from "lucide-react";
 
 export const SecurityCenterView = () => {
@@ -34,14 +30,11 @@ export const SecurityCenterView = () => {
   } = useApp();
 
   const [isScanning, setIsScanning] = useState(false);
-  const [scanSuccess, setScanSuccess] = useState(false);
 
   const handleRunScan = async () => {
     setIsScanning(true);
-    setScanSuccess(false);
     try {
       await verifyLedgerIntegrity();
-      setScanSuccess(true);
     } finally {
       setIsScanning(false);
     }

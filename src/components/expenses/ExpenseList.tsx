@@ -10,13 +10,10 @@ import {
   Clock,
   Check,
   X,
-  Eye,
   Plus,
   Search,
-  Filter,
   FileDown,
   Trash2,
-  AlertCircle,
   Building,
   MapPin,
 } from "lucide-react";
@@ -33,37 +30,63 @@ export const ExpenseList = () => {
     setSelectedReceiptExpense,
     setIsAddExpenseOpen,
     formatMoney,
+    searchQuery,
+    setSearchQuery,
+    selectedCategoryFilter,
+    setSelectedCategoryFilter,
+    selectedEventFilter,
+    setSelectedEventFilter,
+    selectedStatusFilter,
+    setSelectedStatusFilter,
   } = useApp();
 
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [eventFilter, setEventFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState<"date-desc" | "date-asc" | "amount-desc" | "amount-asc">("date-desc");
 
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState(false);
 
-  const canApprove = currentUser.role === "AUDITOR" || currentUser.role === "POLITICIAN" || currentUser.role === "ADMIN";
+  const canApprove =
+    currentUser.role === "AUDITOR" ||
+    currentUser.role === "POLITICIAN" ||
+    currentUser.role === "ADMIN";
   const canCreate = currentUser.role !== "AUDITOR";
+
+  const hasActiveFilters =
+    Boolean(searchQuery) ||
+    selectedCategoryFilter !== "ALL" ||
+    selectedEventFilter !== "ALL" ||
+    selectedStatusFilter !== "ALL";
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setSelectedCategoryFilter("ALL");
+    setSelectedEventFilter("ALL");
+    setSelectedStatusFilter("ALL");
+  };
 
   // Filtered & Sorted list
   const filteredExpenses = expenses
     .filter((exp) => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        exp.description.toLowerCase().includes(search.toLowerCase()) ||
-        exp.vendorName?.toLowerCase().includes(search.toLowerCase()) ||
-        exp.location?.toLowerCase().includes(search.toLowerCase());
+        exp.description.toLowerCase().includes(q) ||
+        (exp.vendorName?.toLowerCase().includes(q) ?? false) ||
+        (exp.location?.toLowerCase().includes(q) ?? false);
 
-      const matchesCategory = categoryFilter === "ALL" || exp.categoryId === categoryFilter;
-      const matchesEvent = eventFilter === "ALL" || exp.eventId === eventFilter;
-      const matchesStatus = statusFilter === "ALL" || exp.status === statusFilter;
+      const matchesCategory =
+        selectedCategoryFilter === "ALL" || exp.categoryId === selectedCategoryFilter;
+      const matchesEvent = selectedEventFilter === "ALL" || exp.eventId === selectedEventFilter;
+      const matchesStatus =
+        selectedStatusFilter === "ALL" || exp.status === selectedStatusFilter;
 
       return matchesSearch && matchesCategory && matchesEvent && matchesStatus;
     })
     .sort((a, b) => {
-      if (sortBy === "date-desc") return new Date(b.expenseDate).getTime() - new Date(a.expenseDate).getTime();
-      if (sortBy === "date-asc") return new Date(a.expenseDate).getTime() - new Date(b.expenseDate).getTime();
+      if (sortBy === "date-desc")
+        return new Date(b.expenseDate).getTime() - new Date(a.expenseDate).getTime();
+      if (sortBy === "date-asc")
+        return new Date(a.expenseDate).getTime() - new Date(b.expenseDate).getTime();
       if (sortBy === "amount-desc") return b.amount - a.amount;
       if (sortBy === "amount-asc") return a.amount - b.amount;
       return 0;
@@ -89,14 +112,15 @@ export const ExpenseList = () => {
       ].join(",")
     );
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([[headers, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", `poliledger_expenses_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -104,7 +128,9 @@ export const ExpenseList = () => {
       {/* Top Header & Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Campaign Expenses</h2>
+          <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Campaign Expenses
+          </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Log, verify, and approve all meetings, rallies, and operational spending
           </p>
@@ -112,6 +138,7 @@ export const ExpenseList = () => {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 shadow-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -121,6 +148,7 @@ export const ExpenseList = () => {
 
           {canCreate && (
             <button
+              type="button"
               onClick={() => setIsAddExpenseOpen(true)}
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 transition-all active:scale-95"
             >
@@ -133,14 +161,14 @@ export const ExpenseList = () => {
 
       {/* Filters Bar */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs space-y-3 transition-colors">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search description, vendor, city..."
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 pl-9 pr-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
@@ -149,8 +177,8 @@ export const ExpenseList = () => {
           {/* Category Filter */}
           <div>
             <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              value={selectedCategoryFilter}
+              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">All Categories ({categories.length})</option>
@@ -165,8 +193,8 @@ export const ExpenseList = () => {
           {/* Event Filter */}
           <div>
             <select
-              value={eventFilter}
-              onChange={(e) => setEventFilter(e.target.value)}
+              value={selectedEventFilter}
+              onChange={(e) => setSelectedEventFilter(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">All Meetings &amp; Rallies</option>
@@ -181,8 +209,8 @@ export const ExpenseList = () => {
           {/* Status Filter */}
           <div>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={selectedStatusFilter}
+              onChange={(e) => setSelectedStatusFilter(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">All Statuses</option>
@@ -192,17 +220,50 @@ export const ExpenseList = () => {
               <option value="DRAFT">📝 Draft</option>
             </select>
           </div>
+
+          {/* Sort Order */}
+          <div>
+            <select
+              value={sortBy}
+              onChange={(e) =>
+                setSortBy(
+                  e.target.value as "date-desc" | "date-asc" | "amount-desc" | "amount-asc"
+                )
+              }
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="date-desc">Newest First</option>
+              <option value="date-asc">Oldest First</option>
+              <option value="amount-desc">Highest Amount</option>
+              <option value="amount-asc">Lowest Amount</option>
+            </select>
+          </div>
         </div>
 
         {/* Filter Summary & Total */}
-        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3 text-xs text-gray-500 dark:text-gray-400">
-          <div>
-            Showing <strong className="text-gray-900 dark:text-white">{filteredExpenses.length}</strong> of{" "}
-            <strong className="text-gray-900 dark:text-white">{expenses.length}</strong> recorded expenditures
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800 pt-3 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-3">
+            <span>
+              Showing <strong className="text-gray-900 dark:text-white">{filteredExpenses.length}</strong>{" "}
+              of <strong className="text-gray-900 dark:text-white">{expenses.length}</strong> recorded
+              expenditures
+            </span>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                <X className="h-3 w-3" />
+                <span>Clear Filters</span>
+              </button>
+            )}
           </div>
           <div>
             Total Filtered Amount:{" "}
-            <strong className="text-gray-900 dark:text-white text-sm">{formatMoney(totalFilteredAmount)}</strong>
+            <strong className="text-gray-900 dark:text-white text-sm">
+              {formatMoney(totalFilteredAmount)}
+            </strong>
           </div>
         </div>
       </div>
@@ -266,7 +327,10 @@ export const ExpenseList = () => {
                   {/* Event */}
                   <td className="py-3.5 px-4 max-w-[180px]">
                     {exp.eventName ? (
-                      <span className="font-medium text-blue-700 dark:text-blue-400 block truncate" title={exp.eventName}>
+                      <span
+                        className="font-medium text-blue-700 dark:text-blue-400 block truncate"
+                        title={exp.eventName}
+                      >
                         {exp.eventName}
                       </span>
                     ) : (
@@ -311,6 +375,7 @@ export const ExpenseList = () => {
                       {/* View Receipt */}
                       {exp.receiptName && (
                         <button
+                          type="button"
                           onClick={() => setSelectedReceiptExpense(exp)}
                           className="rounded-md border border-gray-200 dark:border-gray-700 p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                           title="View attached receipt / invoice"
@@ -323,6 +388,7 @@ export const ExpenseList = () => {
                       {canApprove && exp.status === "SUBMITTED" && (
                         <>
                           <button
+                            type="button"
                             onClick={() => approveExpense(exp.id)}
                             className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 transition-all shadow-xs"
                           >
@@ -330,7 +396,11 @@ export const ExpenseList = () => {
                             <span>Approve</span>
                           </button>
                           <button
-                            onClick={() => setRejectingId(exp.id)}
+                            type="button"
+                            onClick={() => {
+                              setRejectingId(exp.id);
+                              setRejectError(false);
+                            }}
                             className="flex items-center gap-1 rounded-md bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/60 px-2 py-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors"
                           >
                             <X className="h-3.5 w-3.5" />
@@ -342,6 +412,7 @@ export const ExpenseList = () => {
                       {/* Delete */}
                       {(currentUser.role === "ADMIN" || exp.status === "DRAFT") && (
                         <button
+                          type="button"
                           onClick={() => deleteExpense(exp.id)}
                           className="rounded-md p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
                           title="Delete expense"
@@ -370,30 +441,52 @@ export const ExpenseList = () => {
       {rejectingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-2xl space-y-4 text-gray-900 dark:text-gray-100">
-            <h4 className="font-bold text-gray-900 dark:text-white text-sm">Reject Expense — Auditor Note</h4>
+            <h4 className="font-bold text-gray-900 dark:text-white text-sm">
+              Reject Expense &mdash; Auditor Note
+            </h4>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Please enter the compliance reason for rejecting this claim:
             </p>
             <textarea
               rows={3}
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={(e) => {
+                setRejectReason(e.target.value);
+                if (rejectError) setRejectError(false);
+              }}
               placeholder="e.g. Missing official VAT invoice, duplicate claim, or expenditure not approved in rally budget..."
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className={`w-full rounded-lg border bg-white dark:bg-gray-800 p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
+                rejectError ? "border-rose-500" : "border-gray-300 dark:border-gray-700"
+              }`}
             />
+            {rejectError && (
+              <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                Please enter a rejection reason before submitting.
+              </p>
+            )}
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setRejectingId(null)}
+                type="button"
+                onClick={() => {
+                  setRejectingId(null);
+                  setRejectReason("");
+                  setRejectError(false);
+                }}
                 className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => {
-                  if (!rejectReason.trim()) return;
-                  rejectExpense(rejectingId, rejectReason);
+                  if (!rejectReason.trim()) {
+                    setRejectError(true);
+                    return;
+                  }
+                  rejectExpense(rejectingId, rejectReason.trim());
                   setRejectingId(null);
                   setRejectReason("");
+                  setRejectError(false);
                 }}
                 className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 shadow-xs"
               >

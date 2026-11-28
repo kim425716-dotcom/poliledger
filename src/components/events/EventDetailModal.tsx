@@ -1,61 +1,124 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils";
-import {
-  X,
-  Calendar,
-  MapPin,
-  Users,
-  Target,
-  FileText,
-  CheckCircle,
-  Plus,
-} from "lucide-react";
+import { EventStatus } from "@/lib/types";
+import { X, FileText, Plus, Trash2 } from "lucide-react";
 
 export const EventDetailModal = () => {
   const {
     selectedEventDetail,
     setSelectedEventDetail,
+    events,
     expenses,
     formatMoney,
     setSelectedReceiptExpense,
-    setIsAddExpenseOpen,
+    openAddExpenseModal,
+    updateEvent,
+    deleteEvent,
+    currentUser,
   } = useApp();
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (!selectedEventDetail) return null;
 
-  const evt = selectedEventDetail;
+  // Resolve latest snapshot so status updates render immediately
+  const evt = events.find((e) => e.id === selectedEventDetail.id) || selectedEventDetail;
   const eventExpenses = expenses.filter((e) => e.eventId === evt.id);
   const totalSpent = eventExpenses
     .filter((e) => e.status === "APPROVED" || e.status === "SUBMITTED")
     .reduce((sum, e) => sum + e.amount, 0);
 
-  const percentage = Math.round((totalSpent / evt.budget) * 100);
+  const percentage = evt.budget > 0 ? Math.round((totalSpent / evt.budget) * 100) : 0;
+  const canManageEvent =
+    currentUser.role === "POLITICIAN" ||
+    currentUser.role === "CAMPAIGN_MANAGER" ||
+    currentUser.role === "ADMIN";
+
+  const handleClose = () => {
+    setConfirmDelete(false);
+    setSelectedEventDetail(null);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="w-full max-w-3xl rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden my-8 text-gray-900 dark:text-gray-100 transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-6 py-4">
-          <div>
-            <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-6 py-4 gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-blue-100 dark:bg-blue-950/70 px-2 py-0.5 text-[10px] font-bold text-blue-800 dark:text-blue-300">
                 {evt.eventType}
               </span>
-              <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/70 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
-                {evt.status}
-              </span>
+              {canManageEvent ? (
+                <select
+                  value={evt.status}
+                  onChange={(e) =>
+                    updateEvent(evt.id, { status: e.target.value as EventStatus })
+                  }
+                  className="rounded-full bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 focus:outline-none"
+                  aria-label="Update Event Status"
+                >
+                  <option value="PLANNED">PLANNED</option>
+                  <option value="CONFIRMED">CONFIRMED</option>
+                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              ) : (
+                <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/70 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                  {evt.status}
+                </span>
+              )}
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg mt-1">{evt.name}</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg mt-1 truncate">
+              {evt.name}
+            </h3>
           </div>
-          <button
-            onClick={() => setSelectedEventDetail(null)}
-            className="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700"
-          >
-            <X className="h-5 w-5" />
-          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {canManageEvent &&
+              (confirmDelete ? (
+                <div className="flex items-center gap-1 rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/50 px-2 py-1 text-[11px]">
+                  <span className="font-semibold text-rose-700 dark:text-rose-300">Delete?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deleteEvent(evt.id);
+                      handleClose();
+                    }}
+                    className="rounded bg-rose-600 px-2 py-0.5 font-bold text-white hover:bg-rose-700"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="rounded bg-white dark:bg-gray-800 px-2 py-0.5 font-semibold text-gray-600 dark:text-gray-300"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                  title="Delete event"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              ))}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -64,13 +127,21 @@ export const EventDetailModal = () => {
           <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-4 text-xs sm:grid-cols-4">
             <div>
               <p className="text-gray-400 dark:text-gray-500 font-medium">Event Date</p>
-              <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">{formatDate(evt.eventDate)}</p>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400">{evt.startTime} - {evt.endTime}</p>
+              <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">
+                {formatDate(evt.eventDate)}
+              </p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                {evt.startTime} - {evt.endTime}
+              </p>
             </div>
             <div>
               <p className="text-gray-400 dark:text-gray-500 font-medium">Location</p>
-              <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5 truncate">{evt.locationName}</p>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{evt.locationAddress}</p>
+              <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5 truncate">
+                {evt.locationName}
+              </p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                {evt.locationAddress}
+              </p>
             </div>
             <div>
               <p className="text-gray-400 dark:text-gray-500 font-medium">Expected Crowd</p>
@@ -81,9 +152,14 @@ export const EventDetailModal = () => {
             <div>
               <p className="text-gray-400 dark:text-gray-500 font-medium">Budget Consumed</p>
               <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">
-                {formatMoney(totalSpent)} <span className="text-xs text-gray-400 dark:text-gray-500">/ {formatMoney(evt.budget)}</span>
+                {formatMoney(totalSpent)}{" "}
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  / {formatMoney(evt.budget)}
+                </span>
               </p>
-              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{percentage}% utilized</p>
+              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                {percentage}% utilized
+              </p>
             </div>
           </div>
 
@@ -102,9 +178,10 @@ export const EventDetailModal = () => {
                 Itemized Expenses Linked to this Event ({eventExpenses.length})
               </h4>
               <button
+                type="button"
                 onClick={() => {
-                  setSelectedEventDetail(null);
-                  setIsAddExpenseOpen(true);
+                  handleClose();
+                  openAddExpenseModal(evt.id);
                 }}
                 className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
@@ -128,8 +205,12 @@ export const EventDetailModal = () => {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {eventExpenses.map((exp) => (
                     <tr key={exp.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
-                      <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{formatDate(exp.expenseDate)}</td>
-                      <td className="py-2.5 px-3 font-semibold text-gray-900 dark:text-gray-100">{exp.description}</td>
+                      <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">
+                        {formatDate(exp.expenseDate)}
+                      </td>
+                      <td className="py-2.5 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                        {exp.description}
+                      </td>
                       <td className="py-2.5 px-3">
                         <span className="inline-flex items-center gap-1 rounded bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-700 dark:text-gray-300">
                           {exp.categoryIcon} {exp.categoryName}
@@ -154,6 +235,7 @@ export const EventDetailModal = () => {
                       <td className="py-2.5 px-3 text-right">
                         {exp.receiptName && (
                           <button
+                            type="button"
                             onClick={() => setSelectedReceiptExpense(exp)}
                             className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                             title="View receipt"
@@ -167,7 +249,10 @@ export const EventDetailModal = () => {
 
                   {eventExpenses.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-gray-400 dark:text-gray-500">
+                      <td
+                        colSpan={6}
+                        className="py-6 text-center text-gray-400 dark:text-gray-500"
+                      >
                         No expenses logged for this event yet.
                       </td>
                     </tr>

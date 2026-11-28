@@ -1,16 +1,70 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils";
-import { X, CheckCircle, Clock, XCircle, FileText, Download, ShieldCheck } from "lucide-react";
+import { X, FileText, Download, ShieldCheck, Check } from "lucide-react";
 
 export const ReceiptViewerModal = () => {
   const { selectedReceiptExpense, setSelectedReceiptExpense, formatMoney, activeCampaign } = useApp();
+  const [downloaded, setDownloaded] = useState(false);
 
   if (!selectedReceiptExpense) return null;
 
   const exp = selectedReceiptExpense;
+
+  const handleDownloadReceipt = () => {
+    const filename = exp.receiptName || `receipt_${exp.id}.txt`;
+
+    // If user uploaded a real local file encoded as a data/blob URL, download it directly
+    if (exp.receiptUrl && (exp.receiptUrl.startsWith("data:") || exp.receiptUrl.startsWith("blob:"))) {
+      const link = document.createElement("a");
+      link.href = exp.receiptUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Otherwise generate a downloadable verified audit voucher
+      const voucherText = [
+        "================================================================",
+        "               POLILEDGER VERIFIED EXPENSE VOUCHER              ",
+        "================================================================",
+        `Campaign      : ${activeCampaign.politicianName} (${activeCampaign.office})`,
+        `Constituency  : ${activeCampaign.constituency}`,
+        `Document ID   : ${exp.id}`,
+        `Attachment    : ${filename}`,
+        `Expense Date  : ${exp.expenseDate}`,
+        `Category      : ${exp.categoryName}`,
+        `Event         : ${exp.eventName || "General Campaign"}`,
+        `Vendor        : ${exp.vendorName || "Direct / Cash"}`,
+        `Location      : ${exp.location || activeCampaign.constituency}`,
+        `Amount        : ${formatMoney(exp.amount)}`,
+        `Status        : ${exp.status}`,
+        `Logged By     : ${exp.createdByName} (${exp.createdByRole})`,
+        `Approved By   : ${exp.approvedBy || "Pending verification"}`,
+        "----------------------------------------------------------------",
+        `Description   : ${exp.description}`,
+        exp.notes ? `Notes         : ${exp.notes}` : "",
+        "================================================================",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const blob = new Blob([voucherText], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${filename.replace(/\.[^/.]+$/, "")}_verified_voucher.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 2500);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
@@ -107,7 +161,7 @@ export const ReceiptViewerModal = () => {
               </div>
               <div className="flex justify-between border-t border-dashed border-gray-300 dark:border-gray-700 pt-2 font-bold text-xs">
                 <span>TOTAL PAID:</span>
-                <span>{exp.currency} {exp.amount.toLocaleString()}</span>
+                <span>{formatMoney(exp.amount)}</span>
               </div>
 
               <div className="border-t border-dashed border-gray-300 dark:border-gray-700 pt-2 text-center text-[10px] text-gray-400 dark:text-gray-500">
@@ -130,11 +184,21 @@ export const ReceiptViewerModal = () => {
               </span>
             </div>
             <button
-              onClick={() => alert(`Downloading verified copy of ${exp.receiptName}...`)}
+              type="button"
+              onClick={handleDownloadReceipt}
               className="flex items-center gap-1 font-semibold text-blue-700 dark:text-blue-400 hover:underline"
             >
-              <Download className="h-3.5 w-3.5" />
-              <span>Download</span>
+              {downloaded ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-emerald-700 dark:text-emerald-400">Downloaded!</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Download</span>
+                </>
+              )}
             </button>
           </div>
         </div>

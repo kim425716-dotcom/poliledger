@@ -7,13 +7,11 @@ import {
   Clock,
   PieChart,
   Calendar,
-  AlertCircle,
   TrendingUp,
-  CheckCircle2,
 } from "lucide-react";
 
 export const StatCards = () => {
-  const { totalSpent, totalCampaignBudget, expenses, events, formatMoney, setActiveTab } = useApp();
+  const { totalSpent, totalCampaignBudget, expenses, events, formatMoney, setActiveTab, setSelectedStatusFilter } = useApp();
 
   const pendingApprovals = expenses.filter((e) => e.status === "SUBMITTED");
   const budgetPercentage = Math.round((totalSpent / totalCampaignBudget) * 100);
@@ -47,7 +45,10 @@ export const StatCards = () => {
 
       {/* 2. Pending Approvals */}
       <div
-        onClick={() => setActiveTab("expenses")}
+        onClick={() => {
+          setSelectedStatusFilter("SUBMITTED");
+          setActiveTab("expenses");
+        }}
         className="relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs transition-all hover:shadow-md cursor-pointer group"
       >
         <div className="flex items-center justify-between">

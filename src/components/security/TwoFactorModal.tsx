@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { ShieldCheck, X, QrCode, Copy, Check, Lock, Smartphone } from "lucide-react";
+import { copyToClipboard } from "@/lib/utils";
+import { ShieldCheck, X, Copy, Check, Smartphone } from "lucide-react";
 
 export const TwoFactorModal = () => {
   const {
     isTwoFactorModalOpen,
     setIsTwoFactorModalOpen,
-    securitySettings,
     updateSecuritySettings,
     logAuditEvent,
   } = useApp();
@@ -22,8 +22,8 @@ export const TwoFactorModal = () => {
 
   const secretKey = "POLI-7K2X-M9WQ-2026-AUTH";
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(secretKey);
+  const handleCopy = async () => {
+    await copyToClipboard(secretKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

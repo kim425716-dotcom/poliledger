@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { formatDate } from "@/lib/utils";
+import { formatDate, copyToClipboard } from "@/lib/utils";
 import { getCampaignAccentClasses, getNameInitials } from "@/lib/campaign-theme";
 import {
   CheckCircle2,
@@ -44,8 +44,8 @@ export const PublicTransparencyView = () => {
       ? `${window.location.origin}/poliledger/?public=${inspectedCampaign.slug}`
       : `https://logictech.co.ke/poliledger/?public=${inspectedCampaign.slug}`;
 
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(shareableUrl);
+  const handleCopy = async () => {
+    await copyToClipboard(shareableUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };

@@ -1,61 +1,87 @@
 "use client";
 
 import React, { useState } from "react";
-import { useApp, CURRENCY_SYMBOLS } from "@/context/AppContext";
-import { X, Upload, FileText, CheckCircle2 } from "lucide-react";
+import { useApp, EXCHANGE_RATES } from "@/context/AppContext";
+import { X, Upload, CheckCircle2, Trash2 } from "lucide-react";
 
-export const ExpenseFormModal = () => {
-  const {
-    isAddExpenseOpen,
-    setIsAddExpenseOpen,
-    categories,
-    events,
-    addExpense,
-    activeCampaign,
-  } = useApp();
+const ExpenseFormContent = ({
+  initialEventId,
+  initialCategoryId,
+  initialCurrency,
+  onClose,
+}: {
+  initialEventId: string;
+  initialCategoryId: string;
+  initialCurrency: string;
+  onClose: () => void;
+}) => {
+  const { categories, events, addExpense, activeCampaign, formatMoney } = useApp();
 
-  const [eventId, setEventId] = useState("");
-  const [categoryId, setCategoryId] = useState(categories[0]?.id || "");
-  const [expenseDate, setExpenseDate] = useState("2026-11-28");
+  const [eventId, setEventId] = useState(initialEventId);
+  const [categoryId, setCategoryId] = useState(initialCategoryId);
+  const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState(activeCampaign.defaultCurrency || "KES");
+  const [currency, setCurrency] = useState(initialCurrency);
   const [description, setDescription] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptDataUrl, setReceiptDataUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  if (!isAddExpenseOpen) return null;
+  const handleFileSelect = (file: File) => {
+    setReceiptFile(file);
+    // Keep small files in localStorage safely via Data URL so Download works on the viewer modal
+    if (file.size <= 1_500_000) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setReceiptDataUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setReceiptDataUrl(null);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim() || !amount || Number(amount) <= 0) return;
 
+    const rate = EXCHANGE_RATES[currency] || 1;
+    const rawAmount = Number(amount);
+    const amountInKes = Math.round(rawAmount * rate);
+    const conversionNote =
+      currency !== "KES" ? `Original entry: ${currency} ${rawAmount.toLocaleString()}` : "";
+    const combinedNotes = [notes.trim(), conversionNote].filter(Boolean).join(" • ");
+
     addExpense({
       eventId: eventId || undefined,
       categoryId,
       expenseDate,
-      description,
-      amount: Number(amount),
-      currency,
-      vendorName: vendorName || "Direct / Supplier",
-      location: location || activeCampaign.constituency,
-      notes: notes || undefined,
+      description: description.trim(),
+      amount: amountInKes,
+      currency: "KES",
+      vendorName: vendorName.trim() || "Direct / Supplier",
+      location: location.trim() || activeCampaign.constituency,
+      notes: combinedNotes || undefined,
       status: "SUBMITTED",
       receiptName: receiptFile ? receiptFile.name : "receipt_manual_upload.pdf",
-      receiptSize: receiptFile ? `${(receiptFile.size / 1024).toFixed(0)} KB` : "420 KB",
-      receiptUrl: "/receipts/sample-invoice.png",
+      receiptSize: receiptFile
+        ? `${Math.max(1, Math.round(receiptFile.size / 1024))} KB`
+        : "420 KB",
+      receiptUrl: receiptDataUrl || undefined,
     });
 
-    setIsAddExpenseOpen(false);
-    // Reset form
-    setDescription("");
-    setAmount("");
-    setVendorName("");
-    setLocation("");
-    setNotes("");
-    setReceiptFile(null);
+    onClose();
   };
+
+  const kesEquivalent =
+    amount && Number(amount) > 0 && currency !== "KES"
+      ? Math.round(Number(amount) * (EXCHANGE_RATES[currency] || 1))
+      : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
@@ -71,7 +97,8 @@ export const ExpenseFormModal = () => {
             </p>
           </div>
           <button
-            onClick={() => setIsAddExpenseOpen(false)}
+            type="button"
+            onClick={onClose}
             className="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <X className="h-5 w-5" />
@@ -159,6 +186,11 @@ export const ExpenseFormModal = () => {
                   className="w-full rounded-r-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
+              {kesEquivalent !== null && (
+                <p className="mt-1 text-[10px] text-blue-600 dark:text-blue-400">
+                  Ledger equivalent: {formatMoney(kesEquivalent)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -198,7 +230,7 @@ export const ExpenseFormModal = () => {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Nairobi CBD, Westlands, Kibera"
+                placeholder={`e.g. ${activeCampaign.constituency}`}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -211,12 +243,41 @@ export const ExpenseFormModal = () => {
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Attach Receipt / Official Invoice (Photo or PDF)
             </label>
-            <div className="flex justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 px-6 py-5 hover:border-blue-400 transition-colors">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                if (e.dataTransfer.files?.[0]) {
+                  handleFileSelect(e.dataTransfer.files[0]);
+                }
+              }}
+              className={`flex justify-center rounded-xl border-2 border-dashed px-6 py-5 transition-colors ${
+                isDragging
+                  ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/30"
+                  : "border-gray-300 dark:border-gray-700 hover:border-blue-400"
+              }`}
+            >
               <div className="text-center">
                 {receiptFile ? (
                   <div className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="h-6 w-6" />
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
                     <span className="text-xs font-bold">{receiptFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReceiptFile(null);
+                        setReceiptDataUrl(null);
+                      }}
+                      className="rounded p-1 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
+                      title="Remove attachment"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 ) : (
                   <>
@@ -226,9 +287,9 @@ export const ExpenseFormModal = () => {
                         <span>Upload a document</span>
                         <input
                           type="file"
-                          accept=".pdf,.png,.jpg,.jpeg"
+                          accept=".pdf,.png,.jpg,.jpeg,.webp"
                           onChange={(e) => {
-                            if (e.target.files?.[0]) setReceiptFile(e.target.files[0]);
+                            if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
                           }}
                           className="sr-only"
                         />
@@ -236,7 +297,7 @@ export const ExpenseFormModal = () => {
                       <p className="pl-1">or drag and drop</p>
                     </div>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                      PNG, JPG, PDF up to 10MB
+                      PNG, JPG, WEBP, PDF up to 10MB
                     </p>
                   </>
                 )}
@@ -262,7 +323,7 @@ export const ExpenseFormModal = () => {
           <div className="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
             <button
               type="button"
-              onClick={() => setIsAddExpenseOpen(false)}
+              onClick={onClose}
               className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               Cancel
@@ -277,5 +338,27 @@ export const ExpenseFormModal = () => {
         </form>
       </div>
     </div>
+  );
+};
+
+export const ExpenseFormModal = () => {
+  const {
+    isAddExpenseOpen,
+    setIsAddExpenseOpen,
+    preselectedEventId,
+    categories,
+    activeCampaign,
+  } = useApp();
+
+  if (!isAddExpenseOpen) return null;
+
+  return (
+    <ExpenseFormContent
+      key={`${activeCampaign.id}-${preselectedEventId || "general"}`}
+      initialEventId={preselectedEventId || ""}
+      initialCategoryId={categories[0]?.id || ""}
+      initialCurrency={activeCampaign.defaultCurrency || "KES"}
+      onClose={() => setIsAddExpenseOpen(false)}
+    />
   );
 };
