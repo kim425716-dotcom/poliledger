@@ -58,19 +58,19 @@ export const ExpenseFormModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl space-y-5 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+      <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-2xl space-y-5 my-8 text-gray-900 dark:text-gray-100 transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
           <div>
-            <h3 className="text-base font-bold text-gray-900">Log New Campaign Expense</h3>
-            <p className="text-xs text-gray-500">
-              Attach receipt or invoice for auditor verification & transparency
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Log New Campaign Expense</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Attach receipt or invoice for auditor verification &amp; transparency
             </p>
           </div>
           <button
             onClick={() => setIsAddExpenseOpen(false)}
-            className="rounded-lg p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            className="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <X className="h-5 w-5" />
           </button>
@@ -80,13 +80,13 @@ export const ExpenseFormModal = () => {
           {/* Linked Event & Category in 2 columns */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Link to Meeting / Rally
               </label>
               <select
                 value={eventId}
                 onChange={(e) => setEventId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">General Campaign (No specific event)</option>
                 {events.map((evt) => (
@@ -98,14 +98,14 @@ export const ExpenseFormModal = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Expense Category *
               </label>
               <select
                 required
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -119,7 +119,7 @@ export const ExpenseFormModal = () => {
           {/* Date & Amount */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Date of Expenditure *
               </label>
               <input
@@ -127,19 +127,19 @@ export const ExpenseFormModal = () => {
                 required
                 value={expenseDate}
                 onChange={(e) => setExpenseDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Amount & Currency *
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Amount &amp; Currency *
               </label>
               <div className="flex">
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 px-2.5 py-2 text-xs text-gray-700 font-medium"
+                  className="rounded-l-lg border border-r-0 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2.5 py-2 text-xs text-gray-700 dark:text-gray-300 font-medium"
                 >
                   <option value="KES">KES</option>
                   <option value="USD">USD</option>
@@ -154,7 +154,7 @@ export const ExpenseFormModal = () => {
                   placeholder="e.g. 150000"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full rounded-r-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-r-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -162,7 +162,7 @@ export const ExpenseFormModal = () => {
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Description *
             </label>
             <input
@@ -171,14 +171,14 @@ export const ExpenseFormModal = () => {
               placeholder="e.g. PA sound system rental and stage lighting setup"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
           {/* Vendor & Location */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Vendor / Supplier Name
               </label>
               <input
@@ -186,12 +186,12 @@ export const ExpenseFormModal = () => {
                 placeholder="e.g. KICC Corp, Toyota Kenya, Safaricom"
                 value={vendorName}
                 onChange={(e) => setVendorName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Location / Town
               </label>
               <input
@@ -199,28 +199,28 @@ export const ExpenseFormModal = () => {
                 placeholder="e.g. Nairobi CBD, Westlands, Kibera"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
 
           {/* Supporting Receipt / Document Upload */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Attach Receipt / Official Invoice (Photo or PDF)
             </label>
-            <div className="flex justify-center rounded-xl border-2 border-dashed border-gray-300 px-6 py-5 hover:border-blue-400 transition-colors">
+            <div className="flex justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 px-6 py-5 hover:border-blue-400 transition-colors">
               <div className="text-center">
                 {receiptFile ? (
-                  <div className="flex items-center justify-center gap-2 text-emerald-600">
+                  <div className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 className="h-6 w-6" />
                     <span className="text-xs font-bold">{receiptFile.name}</span>
                   </div>
                 ) : (
                   <>
-                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                    <div className="mt-2 flex text-xs text-gray-600 justify-center">
-                      <label className="relative cursor-pointer rounded-md font-semibold text-blue-600 hover:text-blue-500">
+                    <Upload className="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+                    <div className="mt-2 flex text-xs text-gray-600 dark:text-gray-400 justify-center">
+                      <label className="relative cursor-pointer rounded-md font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-500">
                         <span>Upload a document</span>
                         <input
                           type="file"
@@ -233,7 +233,7 @@ export const ExpenseFormModal = () => {
                       </label>
                       <p className="pl-1">or drag and drop</p>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
                       PNG, JPG, PDF up to 10MB
                     </p>
                   </>
@@ -244,7 +244,7 @@ export const ExpenseFormModal = () => {
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Internal Campaign Notes / Justification
             </label>
             <textarea
@@ -252,16 +252,16 @@ export const ExpenseFormModal = () => {
               placeholder="e.g. Approved under emergency youth transport allocation..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 p-2.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
           {/* Footer Submit Buttons */}
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+          <div className="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
             <button
               type="button"
               onClick={() => setIsAddExpenseOpen(false)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               Cancel
             </button>

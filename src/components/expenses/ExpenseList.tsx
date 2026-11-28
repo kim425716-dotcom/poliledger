@@ -3,29 +3,29 @@
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils";
-import { ExpenseStatus } from "@/lib/types";
 import {
-  Search,
-  Filter,
-  Plus,
-  FileDown,
   FileText,
   CheckCircle,
   XCircle,
   Clock,
-  Trash2,
   Check,
   X,
-  ExternalLink,
-  MapPin,
+  Eye,
+  Plus,
+  Search,
+  Filter,
+  FileDown,
+  Trash2,
+  AlertCircle,
   Building,
+  MapPin,
 } from "lucide-react";
 
 export const ExpenseList = () => {
   const {
     expenses,
-    events,
     categories,
+    events,
     currentUser,
     approveExpense,
     rejectExpense,
@@ -55,11 +55,11 @@ export const ExpenseList = () => {
         exp.vendorName?.toLowerCase().includes(search.toLowerCase()) ||
         exp.location?.toLowerCase().includes(search.toLowerCase());
 
-      const matchesCat = categoryFilter === "ALL" || exp.categoryId === categoryFilter;
+      const matchesCategory = categoryFilter === "ALL" || exp.categoryId === categoryFilter;
       const matchesEvent = eventFilter === "ALL" || exp.eventId === eventFilter;
       const matchesStatus = statusFilter === "ALL" || exp.status === statusFilter;
 
-      return matchesSearch && matchesCat && matchesEvent && matchesStatus;
+      return matchesSearch && matchesCategory && matchesEvent && matchesStatus;
     })
     .sort((a, b) => {
       if (sortBy === "date-desc") return new Date(b.expenseDate).getTime() - new Date(a.expenseDate).getTime();
@@ -69,12 +69,11 @@ export const ExpenseList = () => {
       return 0;
     });
 
-  // Calculate filtered totals
   const totalFilteredAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  // Export to CSV function
+  // CSV Export
   const handleExportCSV = () => {
-    const headers = ["ID,Date,Description,Vendor,Category,Event,Amount (KES),Status,Approved By,Notes"];
+    const headers = "ID,Date,Description,Vendor,Category,Event,Amount,Status,ApprovedBy,Notes";
     const rows = filteredExpenses.map((e) =>
       [
         e.id,
@@ -105,8 +104,8 @@ export const ExpenseList = () => {
       {/* Top Header & Actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-900">Campaign Expenses</h2>
-          <p className="text-xs text-gray-500">
+          <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Campaign Expenses</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Log, verify, and approve all meetings, rallies, and operational spending
           </p>
         </div>
@@ -114,9 +113,9 @@ export const ExpenseList = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 shadow-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <FileDown className="h-4 w-4 text-gray-500" />
+            <FileDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             <span>Export CSV</span>
           </button>
 
@@ -133,7 +132,7 @@ export const ExpenseList = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs space-y-3">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs space-y-3 transition-colors">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           {/* Search */}
           <div className="relative">
@@ -143,7 +142,7 @@ export const ExpenseList = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search description, vendor, city..."
-              className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-xs text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 pl-9 pr-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -152,7 +151,7 @@ export const ExpenseList = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">All Categories ({categories.length})</option>
               {categories.map((c) => (
@@ -168,9 +167,9 @@ export const ExpenseList = () => {
             <select
               value={eventFilter}
               onChange={(e) => setEventFilter(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
-              <option value="ALL">All Meetings & Rallies</option>
+              <option value="ALL">All Meetings &amp; Rallies</option>
               {events.map((evt) => (
                 <option key={evt.id} value={evt.id}>
                   {evt.eventType}: {evt.name}
@@ -184,7 +183,7 @@ export const ExpenseList = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="ALL">All Statuses</option>
               <option value="SUBMITTED">⏳ Pending Review</option>
@@ -196,26 +195,26 @@ export const ExpenseList = () => {
         </div>
 
         {/* Filter Summary & Total */}
-        <div className="flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500">
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3 text-xs text-gray-500 dark:text-gray-400">
           <div>
-            Showing <strong className="text-gray-900">{filteredExpenses.length}</strong> of{" "}
-            <strong>{expenses.length}</strong> recorded expenditures
+            Showing <strong className="text-gray-900 dark:text-white">{filteredExpenses.length}</strong> of{" "}
+            <strong className="text-gray-900 dark:text-white">{expenses.length}</strong> recorded expenditures
           </div>
           <div>
             Total Filtered Amount:{" "}
-            <strong className="text-gray-900 text-sm">{formatMoney(totalFilteredAmount)}</strong>
+            <strong className="text-gray-900 dark:text-white text-sm">{formatMoney(totalFilteredAmount)}</strong>
           </div>
         </div>
       </div>
 
       {/* Main Expense Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-xs overflow-hidden">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs overflow-hidden transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/80 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Description & Notes</th>
+                <th className="py-3 px-4">Description &amp; Notes</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Event Link</th>
                 <th className="py-3 px-4">Logged By</th>
@@ -224,18 +223,18 @@ export const ExpenseList = () => {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filteredExpenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-gray-50/80 transition-colors">
+                <tr key={exp.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                   {/* Date */}
-                  <td className="py-3.5 px-4 whitespace-nowrap text-gray-500 font-medium">
+                  <td className="py-3.5 px-4 whitespace-nowrap text-gray-500 dark:text-gray-400 font-medium">
                     {formatDate(exp.expenseDate)}
                   </td>
 
                   {/* Description & Vendor */}
                   <td className="py-3.5 px-4 max-w-[260px]">
-                    <p className="font-semibold text-gray-900">{exp.description}</p>
-                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
+                    <p className="font-semibold text-gray-900 dark:text-white">{exp.description}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
                       {exp.vendorName && (
                         <span className="flex items-center gap-1">
                           <Building className="h-3 w-3 text-gray-400" />
@@ -250,7 +249,7 @@ export const ExpenseList = () => {
                       )}
                     </div>
                     {exp.rejectionReason && (
-                      <p className="mt-1 text-[11px] text-rose-600 bg-rose-50 p-1.5 rounded">
+                      <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 p-1.5 rounded">
                         <strong>Reason:</strong> {exp.rejectionReason}
                       </p>
                     )}
@@ -258,7 +257,7 @@ export const ExpenseList = () => {
 
                   {/* Category */}
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-800">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] font-medium text-gray-800 dark:text-gray-200">
                       <span>{exp.categoryIcon}</span>
                       <span>{exp.categoryName}</span>
                     </span>
@@ -267,22 +266,22 @@ export const ExpenseList = () => {
                   {/* Event */}
                   <td className="py-3.5 px-4 max-w-[180px]">
                     {exp.eventName ? (
-                      <span className="font-medium text-blue-700 block truncate" title={exp.eventName}>
+                      <span className="font-medium text-blue-700 dark:text-blue-400 block truncate" title={exp.eventName}>
                         {exp.eventName}
                       </span>
                     ) : (
-                      <span className="text-gray-400 italic">General Campaign</span>
+                      <span className="text-gray-400 dark:text-gray-500 italic">General Campaign</span>
                     )}
                   </td>
 
                   {/* Logged By */}
-                  <td className="py-3.5 px-4 whitespace-nowrap text-gray-600">
-                    <p className="font-medium text-gray-900">{exp.createdByName}</p>
-                    <p className="text-[10px] text-gray-400">{exp.createdByRole}</p>
+                  <td className="py-3.5 px-4 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                    <p className="font-medium text-gray-900 dark:text-white">{exp.createdByName}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{exp.createdByRole}</p>
                   </td>
 
                   {/* Amount */}
-                  <td className="py-3.5 px-4 whitespace-nowrap text-right font-bold text-gray-900 text-sm">
+                  <td className="py-3.5 px-4 whitespace-nowrap text-right font-bold text-gray-900 dark:text-white text-sm">
                     {formatMoney(exp.amount)}
                   </td>
 
@@ -291,12 +290,12 @@ export const ExpenseList = () => {
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
                         exp.status === "APPROVED"
-                          ? "bg-emerald-100 text-emerald-800"
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300"
                           : exp.status === "SUBMITTED"
-                          ? "bg-amber-100 text-amber-800"
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300"
                           : exp.status === "REJECTED"
-                          ? "bg-rose-100 text-rose-800"
-                          : "bg-gray-100 text-gray-700"
+                          ? "bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300"
+                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                       }`}
                     >
                       {exp.status === "APPROVED" && <CheckCircle className="h-3 w-3" />}
@@ -313,7 +312,7 @@ export const ExpenseList = () => {
                       {exp.receiptName && (
                         <button
                           onClick={() => setSelectedReceiptExpense(exp)}
-                          className="rounded-md border border-gray-200 p-1.5 text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                          className="rounded-md border border-gray-200 dark:border-gray-700 p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                           title="View attached receipt / invoice"
                         >
                           <FileText className="h-4 w-4" />
@@ -332,7 +331,7 @@ export const ExpenseList = () => {
                           </button>
                           <button
                             onClick={() => setRejectingId(exp.id)}
-                            className="flex items-center gap-1 rounded-md bg-rose-50 border border-rose-200 px-2 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 transition-colors"
+                            className="flex items-center gap-1 rounded-md bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/60 px-2 py-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors"
                           >
                             <X className="h-3.5 w-3.5" />
                             <span>Reject</span>
@@ -344,7 +343,7 @@ export const ExpenseList = () => {
                       {(currentUser.role === "ADMIN" || exp.status === "DRAFT") && (
                         <button
                           onClick={() => deleteExpense(exp.id)}
-                          className="rounded-md p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          className="rounded-md p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
                           title="Delete expense"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -357,7 +356,7 @@ export const ExpenseList = () => {
 
               {filteredExpenses.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400">
+                  <td colSpan={8} className="py-12 text-center text-gray-400 dark:text-gray-500">
                     No expenses match the current filter criteria.
                   </td>
                 </tr>
@@ -369,10 +368,10 @@ export const ExpenseList = () => {
 
       {/* Reject Modal */}
       {rejectingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl space-y-4">
-            <h4 className="font-bold text-gray-900 text-sm">Reject Expense — Auditor Note</h4>
-            <p className="text-xs text-gray-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-2xl space-y-4 text-gray-900 dark:text-gray-100">
+            <h4 className="font-bold text-gray-900 dark:text-white text-sm">Reject Expense — Auditor Note</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Please enter the compliance reason for rejecting this claim:
             </p>
             <textarea
@@ -380,12 +379,12 @@ export const ExpenseList = () => {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="e.g. Missing official VAT invoice, duplicate claim, or expenditure not approved in rally budget..."
-              className="w-full rounded-lg border border-gray-300 p-2.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setRejectingId(null)}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>

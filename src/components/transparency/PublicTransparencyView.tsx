@@ -48,7 +48,7 @@ export const PublicTransparencyView = () => {
                 Verified Campaign
               </span>
             </div>
-            <h2 className="text-xl font-bold tracking-tight">Public Accountability & Voter Disclosure</h2>
+            <h2 className="text-xl font-bold tracking-tight">Public Accountability &amp; Voter Disclosure</h2>
             <p className="text-xs text-blue-200 max-w-xl">
               This public read-only view provides full transparency into all approved campaign expenditures.
               Personal phone numbers, staff notes, and draft receipts are automatically protected.
@@ -72,33 +72,33 @@ export const PublicTransparencyView = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-          <span className="text-xs font-semibold uppercase text-gray-500">Verified Public Expenditure</span>
-          <h3 className="text-2xl font-bold text-gray-900 mt-1">{formatMoney(publicTotalSpent)}</h3>
-          <p className="text-xs text-emerald-600 font-medium mt-1">100% backed by approved receipts</p>
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs transition-colors">
+          <span className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Verified Public Expenditure</span>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatMoney(publicTotalSpent)}</h3>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">100% backed by approved receipts</p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-          <span className="text-xs font-semibold uppercase text-gray-500">Audited Political Events</span>
-          <h3 className="text-2xl font-bold text-gray-900 mt-1">{events.length} Events</h3>
-          <p className="text-xs text-gray-500 mt-1">Town halls, youth rallies, and meetings</p>
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs transition-colors">
+          <span className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Audited Political Events</span>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{events.length} Events</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Town halls, youth rallies, and meetings</p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-          <span className="text-xs font-semibold uppercase text-gray-500">Verified Vouchers</span>
-          <h3 className="text-2xl font-bold text-gray-900 mt-1">{approvedExpenses.length} Vouchers</h3>
-          <p className="text-xs text-gray-500 mt-1">Certified by independent CPA auditor</p>
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs transition-colors">
+          <span className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Verified Vouchers</span>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{approvedExpenses.length} Vouchers</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Certified by independent CPA auditor</p>
         </div>
       </div>
 
       {/* Public Expense Records Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-xs overflow-hidden">
-        <div className="border-b border-gray-200 bg-gray-50/70 px-5 py-3.5 flex justify-between items-center">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs overflow-hidden transition-colors">
+        <div className="border-b border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/80 px-5 py-3.5 flex justify-between items-center">
           <div>
-            <h3 className="font-bold text-gray-900 text-sm">Disclosed Campaign Expenses</h3>
-            <p className="text-xs text-gray-500">Published in accordance with campaign finance transparency standards</p>
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Disclosed Campaign Expenses</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Published in accordance with campaign finance transparency standards</p>
           </div>
-          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+          <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/70 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
             {approvedExpenses.length} Published
           </span>
         </div>
@@ -106,7 +106,7 @@ export const PublicTransparencyView = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-50/40">
+              <tr className="border-b border-gray-200 dark:border-gray-800 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50/40 dark:bg-gray-800/40">
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Purpose / Activity</th>
                 <th className="py-3 px-4">Vendor / Supplier</th>
@@ -116,21 +116,21 @@ export const PublicTransparencyView = () => {
                 <th className="py-3 px-4 text-center">Compliance Audit</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {approvedExpenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="py-3.5 px-4 whitespace-nowrap text-gray-500">{formatDate(exp.expenseDate)}</td>
-                  <td className="py-3.5 px-4 font-semibold text-gray-900">{exp.description}</td>
-                  <td className="py-3.5 px-4 text-gray-600">{exp.vendorName || "Certified Supplier"}</td>
+                <tr key={exp.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/50 transition-colors">
+                  <td className="py-3.5 px-4 whitespace-nowrap text-gray-500 dark:text-gray-400">{formatDate(exp.expenseDate)}</td>
+                  <td className="py-3.5 px-4 font-semibold text-gray-900 dark:text-white">{exp.description}</td>
+                  <td className="py-3.5 px-4 text-gray-600 dark:text-gray-300">{exp.vendorName || "Certified Supplier"}</td>
                   <td className="py-3.5 px-4">
-                    <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                    <span className="inline-flex items-center gap-1 rounded bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-300">
                       {exp.categoryIcon} {exp.categoryName}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-gray-600">{exp.eventName || "General Campaign Operations"}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-gray-900">{formatMoney(exp.amount)}</td>
+                  <td className="py-3.5 px-4 text-gray-600 dark:text-gray-300">{exp.eventName || "General Campaign Operations"}</td>
+                  <td className="py-3.5 px-4 text-right font-bold text-gray-900 dark:text-white">{formatMoney(exp.amount)}</td>
                   <td className="py-3.5 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
                       <CheckCircle2 className="h-3 w-3" />
                       <span>Certified</span>
                     </span>

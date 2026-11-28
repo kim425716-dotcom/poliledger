@@ -57,21 +57,21 @@ export const TwoFactorModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-2xl text-gray-900">
+      <div className="relative w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 sm:p-8 shadow-2xl text-gray-900 dark:text-gray-100 transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 border border-purple-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/60">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-base">Two-Factor Authentication (2FA / TOTP)</h3>
-              <p className="text-xs text-gray-500">Protect political campaign finances from unauthorized access</p>
+              <h3 className="font-bold text-gray-900 dark:text-white text-base">Two-Factor Authentication (2FA / TOTP)</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Protect political campaign finances from unauthorized access</p>
             </div>
           </div>
           <button
             onClick={() => setIsTwoFactorModalOpen(false)}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <X className="h-5 w-5" />
           </button>
@@ -79,16 +79,16 @@ export const TwoFactorModal = () => {
 
         {/* Instructions */}
         <div className="mt-5 space-y-4">
-          <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-900">
-            <Smartphone className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" />
+          <div className="flex items-start gap-3 rounded-xl border border-blue-100 dark:border-blue-800/60 bg-blue-50/60 dark:bg-blue-950/40 p-3 text-xs text-blue-900 dark:text-blue-200">
+            <Smartphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
             <p>
               Link your mobile authenticator app (Google Authenticator, Microsoft Authenticator, or Authy) to generate time-based one-time codes for approving high-value campaign expenses.
             </p>
           </div>
 
           {/* Visual QR Code Mock */}
-          <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl border border-gray-100 bg-gray-50">
-            <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-xl bg-white border border-gray-200 p-2 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-xl bg-white border border-gray-200 dark:border-gray-700 p-2 shadow-xs">
               {/* SVG QR Code Simulation */}
               <svg viewBox="0 0 100 100" className="h-full w-full">
                 <rect width="100" height="100" fill="#ffffff" />
@@ -123,21 +123,21 @@ export const TwoFactorModal = () => {
             </div>
 
             <div className="space-y-2 text-left w-full">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Manual Setup Key
               </span>
-              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-mono text-gray-800">
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-mono text-gray-800 dark:text-gray-200">
                 <span className="flex-1 truncate">{secretKey}</span>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200"
                   title="Copy Key"
                 >
-                  {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                  {copied ? <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-[11px] text-gray-500">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
                 Scan the QR code with your authenticator or paste the manual key.
               </p>
             </div>
@@ -146,7 +146,7 @@ export const TwoFactorModal = () => {
           {/* Form */}
           <form onSubmit={handleVerify} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Enter 6-Digit Code from Authenticator App
               </label>
               <input
@@ -155,12 +155,12 @@ export const TwoFactorModal = () => {
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value)}
                 placeholder="123456"
-                className="w-full text-center text-xl font-mono tracking-widest rounded-xl border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-purple-600 focus:outline-none focus:ring-1 focus:ring-purple-600"
+                className="w-full text-center text-xl font-mono tracking-widest rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:border-purple-600 focus:outline-none focus:ring-1 focus:ring-purple-600"
               />
-              {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
+              {error && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>}
               {success && (
-                <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                  <Check className="h-4 w-4" /> Two-Factor Authentication Verified & Activated!
+                <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <Check className="h-4 w-4" /> Two-Factor Authentication Verified &amp; Activated!
                 </p>
               )}
             </div>
@@ -169,7 +169,7 @@ export const TwoFactorModal = () => {
               <button
                 type="button"
                 onClick={() => setIsTwoFactorModalOpen(false)}
-                className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                className="rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
@@ -177,7 +177,7 @@ export const TwoFactorModal = () => {
                 type="submit"
                 className="rounded-xl bg-purple-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-purple-700"
               >
-                Verify & Enable 2FA
+                Verify &amp; Enable 2FA
               </button>
             </div>
           </form>

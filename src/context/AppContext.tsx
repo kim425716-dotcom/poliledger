@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useSyncExternalStore } from "react";
 import {
   MOCK_USERS,
   MOCK_CATEGORIES,
@@ -113,6 +113,10 @@ interface AppContextType {
   dismissedAlerts: string[];
   dismissAlert: (id: string) => void;
 
+  // Theme & Dark Mode
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+
   // ─── SECURITY INTEGRATION ──────────────────────────────────────────
   securitySettings: SecuritySettings;
   updateSecuritySettings: (settings: Partial<SecuritySettings>) => void;
@@ -135,6 +139,26 @@ interface AppContextType {
   isTwoFactorModalOpen: boolean;
   setIsTwoFactorModalOpen: (open: boolean) => void;
 }
+
+const subscribeTheme = (callback: () => void) => {
+  window.addEventListener("storage", callback);
+  window.addEventListener("poliledger-theme-change", callback);
+  const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+  mediaQuery?.addEventListener?.("change", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("poliledger-theme-change", callback);
+    mediaQuery?.removeEventListener?.("change", callback);
+  };
+};
+
+const getThemeSnapshot = () => {
+  const saved = localStorage.getItem("poliledger_theme");
+  if (saved) return saved === "dark";
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+};
+
+const getServerThemeSnapshot = () => false;
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -209,6 +233,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isTwoFactorModalOpen, setIsTwoFactorModalOpen] = useState(false);
 
   // Modals & UI states
+  const isDarkMode = useSyncExternalStore(
+    subscribeTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot
+  );
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [selectedReceiptExpense, setSelectedReceiptExpense] = useState<MockExpense | null>(null);
@@ -220,6 +249,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [selectedEventFilter, setSelectedEventFilter] = useState("ALL");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("ALL");
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+
+  // Synchronize .dark class on <html> whenever theme changes
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkMode);
+  }, [isDarkMode]);
+
+  const toggleDarkMode = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const next = !isDarkMode;
+    localStorage.setItem("poliledger_theme", next ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", next);
+    window.dispatchEvent(new Event("poliledger-theme-change"));
+  }, [isDarkMode]);
 
   // Persist expenses
   useEffect(() => {
@@ -787,6 +829,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
         dismissedAlerts,
         dismissAlert,
+
+        // Theme
+        isDarkMode,
+        toggleDarkMode,
 
         // Security additions
         securitySettings,

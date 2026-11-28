@@ -19,16 +19,16 @@ export const BudgetAlertBanner = () => {
           key={alert.id}
           className={`flex items-center justify-between rounded-xl border p-3.5 shadow-xs transition-all ${
             alert.severity === "CRITICAL"
-              ? "border-rose-200 bg-rose-50/90 text-rose-900"
-              : "border-amber-200 bg-amber-50/90 text-amber-900"
+              ? "border-rose-200 dark:border-rose-800/60 bg-rose-50/90 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200"
+              : "border-amber-200 dark:border-amber-800/60 bg-amber-50/90 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200"
           }`}
         >
           <div className="flex items-center gap-3">
             <div
               className={`rounded-lg p-2 ${
                 alert.severity === "CRITICAL"
-                  ? "bg-rose-100 text-rose-600"
-                  : "bg-amber-100 text-amber-600"
+                  ? "bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400"
+                  : "bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400"
               }`}
             >
               {alert.severity === "CRITICAL" ? (
@@ -45,8 +45,8 @@ export const BudgetAlertBanner = () => {
                 <span
                   className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
                     alert.severity === "CRITICAL"
-                      ? "bg-rose-200 text-rose-800"
-                      : "bg-amber-200 text-amber-800"
+                      ? "bg-rose-200 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200"
+                      : "bg-amber-200 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200"
                   }`}
                 >
                   {alert.percentage}% used
@@ -58,16 +58,20 @@ export const BudgetAlertBanner = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setActiveTab(alert.type === "CATEGORY" ? "budgets" : "events")}
-              className="flex items-center gap-1 text-xs font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
+              onClick={() => setActiveTab("budgets")}
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold underline underline-offset-2 transition-colors ${
+                alert.severity === "CRITICAL"
+                  ? "hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-800 dark:text-rose-300"
+                  : "hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300"
+              }`}
             >
-              <span>Manage</span>
+              <span>Manage Budget</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => dismissAlert(alert.id)}
-              className="rounded-lg p-1 hover:bg-black/5 transition-colors"
-              title="Dismiss alert"
+              className="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              title="Dismiss warning"
             >
               <X className="h-4 w-4" />
             </button>

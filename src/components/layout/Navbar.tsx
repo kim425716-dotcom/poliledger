@@ -15,6 +15,8 @@ import {
   X,
   Lock,
   ShieldCheck,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 export const Navbar = () => {
@@ -30,6 +32,8 @@ export const Navbar = () => {
     setIsAddExpenseOpen,
     setActiveTab,
     lockSession,
+    isDarkMode,
+    toggleDarkMode,
   } = useApp();
 
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -44,22 +48,22 @@ export const Navbar = () => {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "POLITICIAN":
-        return "bg-purple-100 text-purple-800 border-purple-200";
+        return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800/60";
       case "CAMPAIGN_MANAGER":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800/60";
       case "STAFF":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
+        return "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800/60";
       case "AUDITOR":
-        return "bg-amber-100 text-amber-800 border-amber-200";
+        return "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800/60";
       case "ADMIN":
-        return "bg-rose-100 text-rose-800 border-rose-200";
+        return "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800/60";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
     }
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white/95 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 px-4 backdrop-blur-md sm:px-6 transition-colors">
       {/* Brand & Campaign Title */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-700 via-indigo-600 to-purple-600 text-white shadow-md shadow-blue-500/20">
@@ -67,29 +71,29 @@ export const Navbar = () => {
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-bold tracking-tight text-gray-900 text-lg">PoliLedger</span>
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
+            <span className="font-bold tracking-tight text-gray-900 dark:text-white text-lg">PoliLedger</span>
+            <span className="rounded-full bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
               Elections 2026
             </span>
           </div>
-          <p className="hidden text-xs text-gray-500 sm:block">
-            Campaign of Hon. Jane Muthoni • Nairobi Senate
+          <p className="hidden text-xs text-gray-500 dark:text-gray-400 sm:block">
+            Campaign of Hon. Jane Muthoni &bull; Nairobi Senate
           </p>
         </div>
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3.5">
         {/* Currency Switcher */}
-        <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-1 text-xs">
+        <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-1 text-xs">
           {(["KES", "USD", "EUR", "GBP"] as const).map((curr) => (
             <button
               key={curr}
               onClick={() => setSelectedCurrency(curr)}
               className={`rounded px-2 py-1 font-medium transition-colors ${
                 selectedCurrency === curr
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
               {CURRENCY_SYMBOLS[curr]} {curr}
@@ -106,25 +110,39 @@ export const Navbar = () => {
           <span className="hidden sm:inline">Log Expense</span>
         </button>
 
+        {/* Dark / Light Mode Toggle Button */}
+        <button
+          onClick={toggleDarkMode}
+          className="flex items-center justify-center rounded-lg p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          aria-label="Toggle Theme"
+        >
+          {isDarkMode ? (
+            <Sun className="h-4 w-4 text-amber-400 animate-spin-once" />
+          ) : (
+            <Moon className="h-4 w-4 text-gray-600" />
+          )}
+        </button>
+
         {/* Lock Workspace Button */}
         <button
           onClick={lockSession}
-          className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors hidden sm:block"
+          className="rounded-lg p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:block"
           title="Lock Session (Security)"
         >
-          <Lock className="h-4 w-4 text-gray-500" />
+          <Lock className="h-4 w-4" />
         </button>
 
         {/* Notifications / Alerts Bell */}
         <div className="relative">
           <button
             onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-            className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            className="relative rounded-lg p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             title="Notifications & Alerts"
           >
             <Bell className="h-5 w-5" />
             {totalNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-600 px-1 text-[11px] font-bold text-white shadow-sm ring-2 ring-white">
+              <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-600 px-1 text-[11px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-gray-900">
                 {totalNotifications}
               </span>
             )}
@@ -132,17 +150,17 @@ export const Navbar = () => {
 
           {/* Notifications Dropdown */}
           {isAlertsOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-gray-200 bg-white p-4 shadow-xl z-50">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-3">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xl z-50 text-gray-900 dark:text-gray-100">
+              <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Notifications & Alerts</h3>
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifications &amp; Alerts</h3>
+                  <span className="rounded-full bg-blue-100 dark:bg-blue-950/80 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
                     {totalNotifications} active
                   </span>
                 </div>
                 <button
                   onClick={() => setIsAlertsOpen(false)}
-                  className="rounded p-1 text-gray-400 hover:text-gray-600"
+                  className="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -155,14 +173,14 @@ export const Navbar = () => {
                       setActiveTab("expenses");
                       setIsAlertsOpen(false);
                     }}
-                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 hover:bg-amber-100/70 transition-colors"
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/40 p-3 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 transition-colors"
                   >
-                    <FileCheck2 className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <FileCheck2 className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs font-semibold text-amber-900">
+                      <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                         {pendingCount} Pending Approvals
                       </p>
-                      <p className="text-xs text-amber-700">
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
                         Awaiting auditor / finance officer sign-off
                       </p>
                     </div>
@@ -174,26 +192,26 @@ export const Navbar = () => {
                     key={alert.id}
                     className={`flex items-start gap-3 rounded-lg border p-3 ${
                       alert.severity === "CRITICAL"
-                        ? "border-rose-200 bg-rose-50/70"
-                        : "border-amber-200 bg-amber-50/70"
+                        ? "border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/40"
+                        : "border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/40"
                     }`}
                   >
                     <AlertTriangle
                       className={`h-5 w-5 shrink-0 mt-0.5 ${
-                        alert.severity === "CRITICAL" ? "text-rose-600" : "text-amber-600"
+                        alert.severity === "CRITICAL" ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"
                       }`}
                     />
                     <div className="text-xs">
                       <p
                         className={`font-semibold ${
-                          alert.severity === "CRITICAL" ? "text-rose-900" : "text-amber-900"
+                          alert.severity === "CRITICAL" ? "text-rose-900 dark:text-rose-200" : "text-amber-900 dark:text-amber-200"
                         }`}
                       >
                         {alert.type === "CATEGORY" ? "Category Limit Warning" : "Event Budget Warning"}
                       </p>
                       <p
                         className={
-                          alert.severity === "CRITICAL" ? "text-rose-700" : "text-amber-700"
+                          alert.severity === "CRITICAL" ? "text-rose-700 dark:text-rose-400" : "text-amber-700 dark:text-amber-400"
                         }
                       >
                         {alert.message}
@@ -203,7 +221,7 @@ export const Navbar = () => {
                 ))}
 
                 {totalNotifications === 0 && (
-                  <p className="py-4 text-center text-xs text-gray-500">
+                  <p className="py-4 text-center text-xs text-gray-500 dark:text-gray-400">
                     No active alerts. All budgets are healthy!
                   </p>
                 )}
@@ -212,20 +230,20 @@ export const Navbar = () => {
           )}
         </div>
 
-        {/* Role Switcher Pill (Crucial for Demo/Testing) */}
+        {/* Role Switcher Pill */}
         <div className="relative">
           <button
             onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/80 px-2.5 py-1.5 hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/80 px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             title="Switch User Role to test permissions"
           >
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="h-7 w-7 rounded-full object-cover ring-1 ring-gray-300"
+              className="h-7 w-7 rounded-full object-cover ring-1 ring-gray-300 dark:ring-gray-600"
             />
             <div className="text-left hidden md:block">
-              <p className="text-xs font-semibold text-gray-900 leading-none">{currentUser.name}</p>
+              <p className="text-xs font-semibold text-gray-900 dark:text-white leading-none">{currentUser.name}</p>
               <span
                 className={`mt-0.5 inline-block rounded border px-1.5 py-0.2 text-[10px] font-medium ${getRoleBadgeColor(
                   currentUser.role
@@ -239,13 +257,13 @@ export const Navbar = () => {
 
           {/* User / Role Dropdown */}
           {isRoleDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-xl z-50">
-              <div className="px-3 py-2 border-b border-gray-100">
+            <div className="absolute right-0 mt-2 w-72 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 shadow-xl z-50 text-gray-900 dark:text-gray-100">
+              <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                   Switch Active Role (Demo Mode)
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Test the system from each stakeholder's perspective:
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Test the system from each stakeholder&apos;s perspective:
                 </p>
               </div>
               <div className="mt-1 space-y-1">
@@ -258,8 +276,8 @@ export const Navbar = () => {
                     }}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
                       currentUser.id === user.id
-                        ? "bg-blue-50 text-blue-900"
-                        : "hover:bg-gray-50 text-gray-700"
+                        ? "bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                     }`}
                   >
                     <img
@@ -268,7 +286,7 @@ export const Navbar = () => {
                       className="h-8 w-8 rounded-full object-cover"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate">{user.name}</p>
+                      <p className="text-xs font-semibold truncate text-gray-900 dark:text-gray-100">{user.name}</p>
                       <span
                         className={`inline-block rounded border px-1.5 py-0.2 text-[9px] font-medium ${getRoleBadgeColor(
                           user.role
@@ -282,13 +300,13 @@ export const Navbar = () => {
               </div>
 
               {/* Security Center & Lock Action */}
-              <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-xs px-2">
+              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs px-2">
                 <button
                   onClick={() => {
                     setActiveTab("security");
                     setIsRoleDropdownOpen(false);
                   }}
-                  className="flex items-center gap-1.5 font-semibold text-blue-600 hover:text-blue-800"
+                  className="flex items-center gap-1.5 font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                 >
                   <ShieldCheck className="h-3.5 w-3.5" />
                   <span>Security Center</span>
@@ -298,7 +316,7 @@ export const Navbar = () => {
                     lockSession();
                     setIsRoleDropdownOpen(false);
                   }}
-                  className="flex items-center gap-1 text-gray-500 hover:text-gray-800 font-medium"
+                  className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   <span>Lock</span>

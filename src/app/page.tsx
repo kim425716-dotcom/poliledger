@@ -27,7 +27,7 @@ export default function Home() {
   const { activeTab } = useApp();
 
   return (
-    <div className="min-h-screen bg-gray-50/60 font-sans text-gray-900">
+    <div className="min-h-screen bg-gray-50/60 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 transition-colors">
       {/* Top Navigation */}
       <Navbar />
 

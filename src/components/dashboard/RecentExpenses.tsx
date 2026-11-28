@@ -38,15 +38,15 @@ export const RecentExpenses = () => {
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs transition-colors">
+      <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4">
         <div>
-          <h3 className="font-bold text-gray-900 text-sm">Recent Expenses & Invoices</h3>
-          <p className="text-xs text-gray-500">Live feed of campaign expenditures</p>
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm">Recent Expenses &amp; Invoices</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Live feed of campaign expenditures</p>
         </div>
         <button
           onClick={() => setActiveTab("expenses")}
-          className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+          className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
         >
           <span>View All ({expenses.length})</span>
           <ExternalLink className="h-3.5 w-3.5" />
@@ -56,9 +56,9 @@ export const RecentExpenses = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-gray-100 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            <tr className="border-b border-gray-100 dark:border-gray-800 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
               <th className="py-2.5 px-3">Date</th>
-              <th className="py-2.5 px-3">Description & Vendor</th>
+              <th className="py-2.5 px-3">Description &amp; Vendor</th>
               <th className="py-2.5 px-3">Category</th>
               <th className="py-2.5 px-3">Linked Event</th>
               <th className="py-2.5 px-3 text-right">Amount</th>
@@ -66,23 +66,23 @@ export const RecentExpenses = () => {
               <th className="py-2.5 px-3 text-right">Receipt / Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {expenses.slice(0, 6).map((exp) => (
-              <tr key={exp.id} className="hover:bg-gray-50/70 transition-colors">
+              <tr key={exp.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/50 transition-colors">
                 {/* Date */}
-                <td className="py-3 px-3 whitespace-nowrap text-gray-500 font-medium">
+                <td className="py-3 px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 font-medium">
                   {formatDate(exp.expenseDate)}
                 </td>
 
                 {/* Description & Vendor */}
                 <td className="py-3 px-3 max-w-[220px]">
-                  <p className="font-semibold text-gray-900 truncate">{exp.description}</p>
-                  <p className="text-[11px] text-gray-500 truncate">{exp.vendorName || "Direct / Cash"}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white truncate">{exp.description}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{exp.vendorName || "Direct / Cash"}</p>
                 </td>
 
                 {/* Category */}
                 <td className="py-3 px-3 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-300">
                     <span>{exp.categoryIcon}</span>
                     <span>{exp.categoryName}</span>
                   </span>
@@ -91,16 +91,16 @@ export const RecentExpenses = () => {
                 {/* Linked Event */}
                 <td className="py-3 px-3 max-w-[160px]">
                   {exp.eventName ? (
-                    <span className="truncate block font-medium text-blue-700 hover:underline cursor-pointer">
+                    <span className="truncate block font-medium text-blue-700 dark:text-blue-400 hover:underline cursor-pointer">
                       {exp.eventName}
                     </span>
                   ) : (
-                    <span className="text-gray-400 italic">General Campaign</span>
+                    <span className="text-gray-400 dark:text-gray-500 italic">General Campaign</span>
                   )}
                 </td>
 
                 {/* Amount */}
-                <td className="py-3 px-3 whitespace-nowrap text-right font-bold text-gray-900">
+                <td className="py-3 px-3 whitespace-nowrap text-right font-bold text-gray-900 dark:text-white">
                   {formatMoney(exp.amount)}
                 </td>
 
@@ -109,12 +109,12 @@ export const RecentExpenses = () => {
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                       exp.status === "APPROVED"
-                        ? "bg-emerald-100 text-emerald-800"
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300"
                         : exp.status === "SUBMITTED"
-                        ? "bg-amber-100 text-amber-800"
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300"
                         : exp.status === "REJECTED"
-                        ? "bg-rose-100 text-rose-800"
-                        : "bg-gray-100 text-gray-700"
+                        ? "bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300"
+                        : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                     }`}
                   >
                     {exp.status === "APPROVED" && <CheckCircle className="h-3 w-3" />}
@@ -131,7 +131,7 @@ export const RecentExpenses = () => {
                     {exp.receiptName && (
                       <button
                         onClick={() => setSelectedReceiptExpense(exp)}
-                        className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
+                        className="rounded p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         title="Inspect receipt"
                       >
                         <FileText className="h-4 w-4" />
@@ -151,7 +151,7 @@ export const RecentExpenses = () => {
                         </button>
                         <button
                           onClick={() => setRejectingId(exp.id)}
-                          className="flex items-center gap-1 rounded bg-rose-100 px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-200 transition-colors"
+                          className="flex items-center gap-1 rounded bg-rose-100 dark:bg-rose-950/70 px-2 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900/60 transition-colors"
                           title="Reject with note"
                         >
                           <X className="h-3 w-3" />
@@ -169,10 +169,10 @@ export const RecentExpenses = () => {
 
       {/* Reject Modal */}
       {rejectingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl space-y-4">
-            <h4 className="font-bold text-gray-900 text-sm">Reject Expense — Provide Justification</h4>
-            <p className="text-xs text-gray-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-2xl space-y-4 text-gray-900 dark:text-gray-100">
+            <h4 className="font-bold text-gray-900 dark:text-white text-sm">Reject Expense — Provide Justification</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               The submitter will be notified with this audit comment to revise or clarify the expense.
             </p>
             <textarea
@@ -180,12 +180,12 @@ export const RecentExpenses = () => {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="e.g. Receipt is blurry, missing procurement pre-authorization form, or exceeding budget allowance..."
-              className="w-full rounded-lg border border-gray-300 p-2.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setRejectingId(null)}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
