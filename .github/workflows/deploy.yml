@@ -82,3 +82,4 @@ jobs:
           echo "| **Target Folder** | \`${{ secrets.DEPLOY_PATH_PROD || '/public_html/poliledger/' }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Deployed by** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+
