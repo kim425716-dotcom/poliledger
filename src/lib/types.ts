@@ -201,3 +201,40 @@ export interface LedgerIntegrityReport {
   lastScannedAt: string;
   merkleRoot: string;
 }
+
+// ─── MULTI-POLITICIAN CAMPAIGN TYPES ─────────────────────────────────
+
+export type CampaignAccentColor = "blue" | "emerald" | "purple" | "amber" | "rose";
+
+export interface PoliticianCampaign {
+  id: string;
+  slug: string;
+  politicianName: string;
+  office: string;
+  constituency: string;
+  party: string;
+  electionCycle: string;
+  accentColor: CampaignAccentColor;
+  avatar?: string;
+  defaultCurrency: string;
+  publicTransparencyEnabled: boolean;
+  accessPin: string;
+  createdAt: string;
+}
+
+export interface NewCampaignInput {
+  politicianName: string;
+  office: string;
+  constituency: string;
+  party: string;
+  electionCycle: string;
+  accentColor: CampaignAccentColor;
+  defaultCurrency: string;
+  totalBudgetCap: number;
+  publicTransparencyEnabled: boolean;
+  accessPin?: string;
+  auditorName?: string;
+  auditorEmail?: string;
+  managerName?: string;
+  managerEmail?: string;
+}

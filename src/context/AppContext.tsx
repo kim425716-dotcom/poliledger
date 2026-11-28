@@ -1,25 +1,40 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useSyncExternalStore } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+  useSyncExternalStore,
+  useMemo,
+} from "react";
 import {
   MOCK_USERS,
   MOCK_CATEGORIES,
   MOCK_EVENTS,
   MOCK_EXPENSES,
   MOCK_AUDIT_LOGS,
+  INITIAL_CAMPAIGNS,
+  INITIAL_WORKSPACES,
+  DEFAULT_CAMPAIGN_SECURITY_SETTINGS,
+  createScaledCategories,
   MockUser,
   MockCategory,
   MockEvent,
   MockExpense,
   MockBudgetAlert,
+  CampaignWorkspaceData,
 } from "@/data/mock-data";
 import {
   Role,
   ExpenseStatus,
-  EventStatus,
   SecuritySettings,
   AuditLogEntry,
   LedgerIntegrityReport,
+  PoliticianCampaign,
+  NewCampaignInput,
 } from "@/lib/types";
 import { computeExpenseHash, computeAuditEntryHash } from "@/lib/crypto";
 
@@ -32,6 +47,8 @@ export const EXCHANGE_RATES: Record<string, number> = {
   GBP: 168.2,
   UGX: 0.035,
   TZS: 0.051,
+  NGN: 0.082,
+  ZAR: 7.25,
 };
 
 export const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -41,20 +58,42 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: "£",
   UGX: "USh",
   TZS: "TSh",
+  NGN: "₦",
+  ZAR: "R",
 };
 
-export const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
-  twoFactorEnabled: false,
-  separationOfDuties: true,
-  sessionTimeoutMinutes: 15,
-  require2FAForLargeExpenses: true,
-  largeExpenseThreshold: 100000,
-  piiMaskingEnabled: true,
-  tamperProtectionActive: true,
-};
+export const DEFAULT_SECURITY_SETTINGS: SecuritySettings = DEFAULT_CAMPAIGN_SECURITY_SETTINGS;
+
+export interface CampaignMetrics {
+  totalSpent: number;
+  approvedSpent: number;
+  totalBudget: number;
+  pendingCount: number;
+  approvedCount: number;
+  eventCount: number;
+  teamCount: number;
+  budgetPercentage: number;
+}
 
 interface AppContextType {
-  // Current user & role switching
+  // Multi-Politician Campaigns
+  campaigns: PoliticianCampaign[];
+  activeCampaignId: string;
+  activeCampaign: PoliticianCampaign;
+  switchCampaign: (campaignId: string) => void;
+  addCampaign: (input: NewCampaignInput) => PoliticianCampaign;
+  updateCampaign: (campaignId: string, updates: Partial<PoliticianCampaign>) => void;
+  deleteCampaign: (campaignId: string) => boolean;
+  addTeamMember: (
+    campaignId: string,
+    member: { name: string; email: string; role: Role; title: string }
+  ) => void;
+  getCampaignWorkspace: (campaignId: string) => CampaignWorkspaceData;
+  getCampaignMetrics: (campaignId: string) => CampaignMetrics;
+  isAddCampaignOpen: boolean;
+  setIsAddCampaignOpen: (open: boolean) => void;
+
+  // Current user & role switching (scoped to active campaign)
   currentUser: MockUser;
   switchUser: (userId: string) => void;
   allUsers: MockUser[];
@@ -69,21 +108,34 @@ interface AppContextType {
   formatMoney: (amountInKes: number) => string;
   convertFromKes: (amountInKes: number) => number;
 
-  // Expenses CRUD & Approvals
+  // Expenses CRUD & Approvals (scoped to active campaign)
   expenses: MockExpense[];
-  addExpense: (expense: Omit<MockExpense, "id" | "createdAt" | "createdById" | "createdByName" | "createdByRole" | "categoryName" | "categoryIcon" | "categoryColor" | "eventName">) => void;
+  addExpense: (
+    expense: Omit<
+      MockExpense,
+      | "id"
+      | "createdAt"
+      | "createdById"
+      | "createdByName"
+      | "createdByRole"
+      | "categoryName"
+      | "categoryIcon"
+      | "categoryColor"
+      | "eventName"
+    >
+  ) => void;
   updateExpense: (id: string, updates: Partial<MockExpense>) => void;
   deleteExpense: (id: string) => void;
   approveExpense: (id: string, notes?: string) => boolean;
   rejectExpense: (id: string, reason: string) => void;
 
-  // Events CRUD
+  // Events CRUD (scoped to active campaign)
   events: MockEvent[];
   addEvent: (event: Omit<MockEvent, "id">) => void;
   updateEvent: (id: string, updates: Partial<MockEvent>) => void;
   deleteEvent: (id: string) => void;
 
-  // Categories & Budgets
+  // Categories & Budgets (scoped to active campaign)
   categories: MockCategory[];
   totalCampaignBudget: number;
   totalSpent: number;
@@ -130,7 +182,9 @@ interface AppContextType {
     entityId: string,
     entityName: string,
     details: string,
-    status?: "VERIFIED" | "ALERT" | "REJECTED" | "LOGGED"
+    status?: "VERIFIED" | "ALERT" | "REJECTED" | "LOGGED",
+    overrideCampaignId?: string,
+    overrideActor?: { id: string; name: string; role: Role | "SYSTEM" }
   ) => Promise<void>;
   verifyLedgerIntegrity: () => Promise<LedgerIntegrityReport>;
   ledgerReport: LedgerIntegrityReport | null;
@@ -160,70 +214,143 @@ const getThemeSnapshot = () => {
 
 const getServerThemeSnapshot = () => false;
 
+const EMPTY_WORKSPACE: CampaignWorkspaceData = {
+  users: MOCK_USERS,
+  categories: MOCK_CATEGORIES,
+  events: [],
+  expenses: [],
+  auditLogs: [],
+  securitySettings: DEFAULT_CAMPAIGN_SECURITY_SETTINGS,
+};
+
+function slugifyCampaignName(name: string, cycle: string): string {
+  const base = `${name}-${cycle}`
+    .toLowerCase()
+    .replace(/^hon\.?\s*/i, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return base || `campaign-${Date.now()}`;
+}
+
+function buildInitialWorkspaces(): Record<string, CampaignWorkspaceData> {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("poliledger_v2_workspaces");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+
+    // Migrate any pre-v2 single-campaign localStorage data cleanly into Jane Muthoni's workspace
+    const legacyExpenses = localStorage.getItem("poliledger_expenses");
+    const legacyEvents = localStorage.getItem("poliledger_events");
+    const legacySecurity = localStorage.getItem("poliledger_security_settings");
+    const legacyAudit = localStorage.getItem("poliledger_audit_logs");
+
+    if (legacyExpenses || legacyEvents || legacySecurity || legacyAudit) {
+      try {
+        return {
+          ...INITIAL_WORKSPACES,
+          "camp-jane-2026": {
+            users: MOCK_USERS,
+            categories: MOCK_CATEGORIES,
+            events: legacyEvents ? JSON.parse(legacyEvents) : MOCK_EVENTS,
+            expenses: legacyExpenses ? JSON.parse(legacyExpenses) : MOCK_EXPENSES,
+            auditLogs: legacyAudit ? JSON.parse(legacyAudit) : MOCK_AUDIT_LOGS,
+            securitySettings: legacySecurity
+              ? JSON.parse(legacySecurity)
+              : DEFAULT_CAMPAIGN_SECURITY_SETTINGS,
+          },
+        };
+      } catch {}
+    }
+  }
+  return INITIAL_WORKSPACES;
+}
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // Users
-  const [currentUser, setCurrentUser] = useState<MockUser>(MOCK_USERS[0]);
+  // Campaigns Registry
+  const [campaigns, setCampaigns] = useState<PoliticianCampaign[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("poliledger_v2_campaigns");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
+      }
+    }
+    return INITIAL_CAMPAIGNS;
+  });
 
-  // Navigation
-  const [activeTab, setActiveTab] = useState<string>("dashboard");
+  // Active Campaign ID (supports ?public=<slug> deep link)
+  const [activeCampaignId, setActiveCampaignId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const publicSlug = params.get("public");
+      if (publicSlug) {
+        const savedCampsRaw = localStorage.getItem("poliledger_v2_campaigns");
+        const list: PoliticianCampaign[] = savedCampsRaw
+          ? (() => {
+              try {
+                return JSON.parse(savedCampsRaw);
+              } catch {
+                return INITIAL_CAMPAIGNS;
+              }
+            })()
+          : INITIAL_CAMPAIGNS;
+        const found = list.find((c) => c.slug === publicSlug);
+        if (found) return found.id;
+      }
+      const saved = localStorage.getItem("poliledger_v2_active_campaign_id");
+      if (saved) return saved;
+    }
+    return INITIAL_CAMPAIGNS[0].id;
+  });
 
-  // Currency view
+  // Per-campaign isolated workspaces
+  const [workspaces, setWorkspaces] = useState<Record<string, CampaignWorkspaceData>>(
+    buildInitialWorkspaces
+  );
+
+  // Active user ID per campaign
+  const [activeUserByCampaign, setActiveUserByCampaign] = useState<Record<string, string>>({});
+
+  // Resolve active campaign safely
+  const activeCampaign = useMemo(() => {
+    return campaigns.find((c) => c.id === activeCampaignId) || campaigns[0];
+  }, [campaigns, activeCampaignId]);
+
+  const effectiveCampaignId = activeCampaign.id;
+
+  // Resolve current workspace safely
+  const activeWorkspace = useMemo(() => {
+    return workspaces[effectiveCampaignId] || EMPTY_WORKSPACE;
+  }, [workspaces, effectiveCampaignId]);
+
+  const allUsers = activeWorkspace.users;
+  const currentUser = useMemo(() => {
+    const selectedUserId = activeUserByCampaign[effectiveCampaignId];
+    return allUsers.find((u) => u.id === selectedUserId) || allUsers[0] || MOCK_USERS[0];
+  }, [allUsers, activeUserByCampaign, effectiveCampaignId]);
+
+  const expenses = activeWorkspace.expenses;
+  const events = activeWorkspace.events;
+  const categories = activeWorkspace.categories;
+  const auditLogs = activeWorkspace.auditLogs;
+  const securitySettings = activeWorkspace.securitySettings;
+
+  // Navigation & Currency (defaults to "transparency" when ?public=<slug> is visited)
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("public")) return "transparency";
+    }
+    return "dashboard";
+  });
   const [selectedCurrency, setSelectedCurrency] = useState<string>("KES");
-
-  // Data states
-  const [expenses, setExpenses] = useState<MockExpense[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("poliledger_expenses");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return MOCK_EXPENSES;
-  });
-
-  const [events, setEvents] = useState<MockEvent[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("poliledger_events");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return MOCK_EVENTS;
-  });
-
-  const [categories] = useState<MockCategory[]>(MOCK_CATEGORIES);
-
-  // Security Settings
-  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("poliledger_security_settings");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return DEFAULT_SECURITY_SETTINGS;
-  });
-
-  // Audit Logs
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("poliledger_audit_logs");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return MOCK_AUDIT_LOGS;
-  });
 
   // Session Protection & Lock
   const [isSessionLocked, setIsSessionLocked] = useState<boolean>(false);
@@ -240,17 +367,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   );
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false);
   const [selectedReceiptExpense, setSelectedReceiptExpense] = useState<MockExpense | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] = useState<MockEvent | null>(null);
 
-  // Filtering
+  // Filtering & Dismissed alerts
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("ALL");
   const [selectedEventFilter, setSelectedEventFilter] = useState("ALL");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("ALL");
-  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [dismissedAlertsByCampaign, setDismissedAlertsByCampaign] = useState<
+    Record<string, string[]>
+  >({});
 
-  // Synchronize .dark class on <html> whenever theme changes
+  const dismissedAlerts = useMemo(
+    () => dismissedAlertsByCampaign[effectiveCampaignId] || [],
+    [dismissedAlertsByCampaign, effectiveCampaignId]
+  );
+
+  // Synchronize .dark class on <html>
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
@@ -263,37 +398,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     window.dispatchEvent(new Event("poliledger-theme-change"));
   }, [isDarkMode]);
 
-  // Persist expenses
+  // Persist campaigns & workspaces
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("poliledger_expenses", JSON.stringify(expenses));
+      localStorage.setItem("poliledger_v2_campaigns", JSON.stringify(campaigns));
     }
-  }, [expenses]);
+  }, [campaigns]);
 
-  // Persist events
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("poliledger_events", JSON.stringify(events));
+      localStorage.setItem("poliledger_v2_active_campaign_id", effectiveCampaignId);
     }
-  }, [events]);
+  }, [effectiveCampaignId]);
 
-  // Persist security settings
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("poliledger_security_settings", JSON.stringify(securitySettings));
+      localStorage.setItem("poliledger_v2_workspaces", JSON.stringify(workspaces));
     }
-  }, [securitySettings]);
-
-  // Persist audit logs
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("poliledger_audit_logs", JSON.stringify(auditLogs));
-    }
-  }, [auditLogs]);
+  }, [workspaces]);
 
   // Inactivity auto-lock timer
   useEffect(() => {
-    if (!securitySettings.sessionTimeoutMinutes || securitySettings.sessionTimeoutMinutes <= 0) return;
+    if (!securitySettings.sessionTimeoutMinutes || securitySettings.sessionTimeoutMinutes <= 0)
+      return;
 
     let timeoutId: NodeJS.Timeout;
 
@@ -324,6 +451,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [securitySettings.sessionTimeoutMinutes, isSessionLocked]);
 
+  // Helper to update a workspace partition cleanly
+  const updateWorkspace = useCallback(
+    (
+      campaignId: string,
+      updater: (ws: CampaignWorkspaceData) => CampaignWorkspaceData
+    ) => {
+      setWorkspaces((prev) => {
+        const current = prev[campaignId] || EMPTY_WORKSPACE;
+        return {
+          ...prev,
+          [campaignId]: updater(current),
+        };
+      });
+    },
+    []
+  );
+
   // ─── AUDIT LOGGING HELPER ──────────────────────────────────────────
   const logAuditEvent = useCallback(
     async (
@@ -331,16 +475,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       entityId: string,
       entityName: string,
       details: string,
-      status: "VERIFIED" | "ALERT" | "REJECTED" | "LOGGED" = "LOGGED"
+      status: "VERIFIED" | "ALERT" | "REJECTED" | "LOGGED" = "LOGGED",
+      overrideCampaignId?: string,
+      overrideActor?: { id: string; name: string; role: Role | "SYSTEM" }
     ) => {
+      const targetCampaignId = overrideCampaignId || effectiveCampaignId;
+      const targetWs = workspaces[targetCampaignId] || activeWorkspace;
       const now = new Date().toISOString();
       const id = `aud-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      const previousHash = auditLogs[0]?.hash || "GENESIS_POLILEDGER_ROOT";
+      const previousHash = targetWs.auditLogs[0]?.hash || "GENESIS_POLILEDGER_ROOT";
+      const actor = overrideActor || {
+        id: currentUser.id,
+        name: currentUser.name,
+        role: currentUser.role,
+      };
 
       const hash = await computeAuditEntryHash({
         id,
         timestamp: now,
-        actorId: currentUser.id,
+        actorId: actor.id,
         action,
         entityId,
         details,
@@ -350,34 +503,287 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const newEntry: AuditLogEntry = {
         id,
         timestamp: now,
-        actorId: currentUser.id,
-        actorName: currentUser.name,
-        actorRole: currentUser.role,
+        actorId: actor.id,
+        actorName: actor.name,
+        actorRole: actor.role,
         action,
         entityId,
         entityName,
         details,
-        ipAddress: "197.232.88.42 (Nairobi, Verified)",
+        ipAddress: `197.232.88.42 (${activeCampaign.constituency}, Verified)`,
         hash,
         status,
       };
 
-      setAuditLogs((prev) => [newEntry, ...prev]);
+      updateWorkspace(targetCampaignId, (ws) => ({
+        ...ws,
+        auditLogs: [newEntry, ...ws.auditLogs],
+      }));
     },
-    [auditLogs, currentUser]
+    [
+      effectiveCampaignId,
+      workspaces,
+      activeWorkspace,
+      currentUser,
+      activeCampaign.constituency,
+      updateWorkspace,
+    ]
   );
 
-  // Switch User / Role
+  // ─── MULTI-POLITICIAN CAMPAIGN ACTIONS ─────────────────────────────
+
+  const switchCampaign = useCallback(
+    (campaignId: string) => {
+      const target = campaigns.find((c) => c.id === campaignId);
+      if (!target) return;
+
+      setActiveCampaignId(campaignId);
+      setSelectedCurrency(target.defaultCurrency || "KES");
+      setSelectedReceiptExpense(null);
+      setSelectedEventDetail(null);
+      setLedgerReport(null);
+      setSearchQuery("");
+      setSelectedCategoryFilter("ALL");
+      setSelectedEventFilter("ALL");
+      setSelectedStatusFilter("ALL");
+
+      const targetUsers = workspaces[campaignId]?.users || [];
+      const primaryUser = targetUsers[0];
+      if (primaryUser) {
+        logAuditEvent(
+          "CAMPAIGN_WORKSPACE_OPENED",
+          target.id,
+          `${target.politicianName} (${target.office})`,
+          `Switched active workspace to ${target.politicianName} campaign ledger.`,
+          "LOGGED",
+          campaignId,
+          { id: primaryUser.id, name: primaryUser.name, role: primaryUser.role }
+        );
+      }
+    },
+    [campaigns, workspaces, logAuditEvent]
+  );
+
+  const addCampaign = useCallback(
+    (input: NewCampaignInput): PoliticianCampaign => {
+      const id = `camp-${Date.now()}`;
+      const baseSlug = slugifyCampaignName(input.politicianName, input.electionCycle);
+      const slugExists = campaigns.some((c) => c.slug === baseSlug);
+      const slug = slugExists ? `${baseSlug}-${Date.now().toString().slice(-4)}` : baseSlug;
+
+      const newCampaign: PoliticianCampaign = {
+        id,
+        slug,
+        politicianName: input.politicianName.trim(),
+        office: input.office.trim(),
+        constituency: input.constituency.trim(),
+        party: input.party.trim() || "Independent Candidate",
+        electionCycle: input.electionCycle.trim() || "Elections 2026",
+        accentColor: input.accentColor,
+        defaultCurrency: input.defaultCurrency || "KES",
+        publicTransparencyEnabled: input.publicTransparencyEnabled,
+        accessPin: input.accessPin?.trim() || "2026",
+        createdAt: new Date().toISOString(),
+      };
+
+      const initials = newCampaign.politicianName
+        .replace(/^hon\.?\s*/i, "")
+        .split(" ")
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+
+      const emailDomain = `${slug.replace(/[^a-z0-9]/g, "")}.ke`;
+      const politicianUser: MockUser = {
+        id: `${id}-usr-1`,
+        name: newCampaign.politicianName,
+        email: `candidate@${emailDomain}`,
+        role: "POLITICIAN",
+        avatar: "",
+        title: `${newCampaign.office} Candidate & Campaign Owner`,
+      };
+      const managerUser: MockUser = {
+        id: `${id}-usr-2`,
+        name: input.managerName?.trim() || `${initials} Campaign Director`,
+        email: input.managerEmail?.trim() || `director@${emailDomain}`,
+        role: "CAMPAIGN_MANAGER",
+        avatar: "",
+        title: "Campaign Operations Manager",
+      };
+      const staffUser: MockUser = {
+        id: `${id}-usr-3`,
+        name: "Field Logistics Officer",
+        email: `logistics@${emailDomain}`,
+        role: "STAFF",
+        avatar: "",
+        title: `${newCampaign.constituency} Event Coordinator`,
+      };
+      const auditorUser: MockUser = {
+        id: `${id}-usr-4`,
+        name: input.auditorName?.trim() || "Independent Compliance CPA",
+        email: input.auditorEmail?.trim() || `audit@${emailDomain}`,
+        role: "AUDITOR",
+        avatar: "",
+        title: "Certified Public Accountant & Compliance Officer",
+      };
+
+      const initialWorkspace: CampaignWorkspaceData = {
+        users: [politicianUser, managerUser, staffUser, auditorUser],
+        categories: createScaledCategories(input.totalBudgetCap),
+        events: [],
+        expenses: [],
+        auditLogs: [
+          {
+            id: `aud-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            actorId: politicianUser.id,
+            actorName: politicianUser.name,
+            actorRole: "POLITICIAN",
+            action: "CAMPAIGN_INITIALIZED",
+            entityId: newCampaign.id,
+            entityName: `${newCampaign.politicianName} — ${newCampaign.office}`,
+            details: `Multi-politician campaign workspace provisioned for ${newCampaign.constituency} (${newCampaign.party}) with budget cap ${newCampaign.defaultCurrency} ${input.totalBudgetCap.toLocaleString()}.`,
+            ipAddress: `197.232.88.42 (${newCampaign.constituency})`,
+            hash: "0000" + Math.random().toString(16).slice(2).padEnd(60, "a").slice(0, 60),
+            status: "VERIFIED",
+          },
+        ],
+        securitySettings: DEFAULT_CAMPAIGN_SECURITY_SETTINGS,
+      };
+
+      setCampaigns((prev) => [...prev, newCampaign]);
+      setWorkspaces((prev) => ({
+        ...prev,
+        [id]: initialWorkspace,
+      }));
+      setActiveCampaignId(id);
+      setSelectedCurrency(newCampaign.defaultCurrency);
+      setLedgerReport(null);
+
+      return newCampaign;
+    },
+    [campaigns]
+  );
+
+  const updateCampaign = useCallback(
+    (campaignId: string, updates: Partial<PoliticianCampaign>) => {
+      setCampaigns((prev) =>
+        prev.map((c) => (c.id === campaignId ? { ...c, ...updates } : c))
+      );
+      logAuditEvent(
+        "CAMPAIGN_PROFILE_UPDATED",
+        campaignId,
+        updates.politicianName || campaignId,
+        `Campaign settings updated: ${Object.keys(updates).join(", ")}`,
+        "LOGGED",
+        campaignId
+      );
+    },
+    [logAuditEvent]
+  );
+
+  const deleteCampaign = useCallback(
+    (campaignId: string): boolean => {
+      if (campaigns.length <= 1) return false;
+      const remaining = campaigns.filter((c) => c.id !== campaignId);
+      setCampaigns(remaining);
+      setWorkspaces((prev) => {
+        const copy = { ...prev };
+        delete copy[campaignId];
+        return copy;
+      });
+      if (effectiveCampaignId === campaignId && remaining[0]) {
+        setActiveCampaignId(remaining[0].id);
+        setSelectedCurrency(remaining[0].defaultCurrency || "KES");
+      }
+      return true;
+    },
+    [campaigns, effectiveCampaignId]
+  );
+
+  const addTeamMember = useCallback(
+    (
+      campaignId: string,
+      member: { name: string; email: string; role: Role; title: string }
+    ) => {
+      const newUser: MockUser = {
+        id: `${campaignId}-usr-${Date.now()}`,
+        name: member.name.trim(),
+        email: member.email.trim(),
+        role: member.role,
+        avatar: "",
+        title: member.title.trim() || member.role,
+      };
+
+      updateWorkspace(campaignId, (ws) => ({
+        ...ws,
+        users: [...ws.users, newUser],
+      }));
+
+      logAuditEvent(
+        "TEAM_MEMBER_ADDED",
+        newUser.id,
+        newUser.name,
+        `Onboarded ${newUser.name} as ${newUser.role} (${newUser.title}) into campaign workspace.`,
+        "VERIFIED",
+        campaignId
+      );
+    },
+    [updateWorkspace, logAuditEvent]
+  );
+
+  const getCampaignWorkspace = useCallback(
+    (campaignId: string): CampaignWorkspaceData => {
+      return workspaces[campaignId] || EMPTY_WORKSPACE;
+    },
+    [workspaces]
+  );
+
+  const getCampaignMetrics = useCallback(
+    (campaignId: string): CampaignMetrics => {
+      const ws = workspaces[campaignId] || EMPTY_WORKSPACE;
+      const totalSpentCalc = ws.expenses
+        .filter((e) => e.status === "APPROVED" || e.status === "SUBMITTED")
+        .reduce((sum, e) => sum + e.amount, 0);
+      const approvedSpentCalc = ws.expenses
+        .filter((e) => e.status === "APPROVED")
+        .reduce((sum, e) => sum + e.amount, 0);
+      const totalBudgetCalc = ws.categories.reduce((sum, c) => sum + c.budgetLimit, 0) || 1;
+      const pendingCount = ws.expenses.filter((e) => e.status === "SUBMITTED").length;
+      const approvedCount = ws.expenses.filter((e) => e.status === "APPROVED").length;
+
+      return {
+        totalSpent: totalSpentCalc,
+        approvedSpent: approvedSpentCalc,
+        totalBudget: totalBudgetCalc,
+        pendingCount,
+        approvedCount,
+        eventCount: ws.events.length,
+        teamCount: ws.users.length,
+        budgetPercentage: Math.round((totalSpentCalc / totalBudgetCalc) * 100),
+      };
+    },
+    [workspaces]
+  );
+
+  // Switch User / Role within Active Campaign
   const switchUser = (userId: string) => {
-    const user = MOCK_USERS.find((u) => u.id === userId);
+    const user = allUsers.find((u) => u.id === userId);
     if (user) {
-      setCurrentUser(user);
+      setActiveUserByCampaign((prev) => ({
+        ...prev,
+        [effectiveCampaignId]: user.id,
+      }));
       logAuditEvent(
         "USER_SWITCH_ROLE",
         user.id,
         user.name,
-        `Active session context switched to role: ${user.role} (${user.title})`,
-        "LOGGED"
+        `Active session context switched to role: ${user.role} (${user.title}) in ${activeCampaign.politicianName}'s campaign`,
+        "LOGGED",
+        effectiveCampaignId,
+        { id: user.id, name: user.name, role: user.role }
       );
     }
   };
@@ -392,7 +798,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const converted = convertFromKes(amountInKes);
     const symbol = CURRENCY_SYMBOLS[selectedCurrency] || selectedCurrency;
     return `${symbol} ${new Intl.NumberFormat("en-KE", {
-      maximumFractionDigits: selectedCurrency === "KES" || selectedCurrency === "UGX" || selectedCurrency === "TZS" ? 0 : 2,
+      maximumFractionDigits:
+        selectedCurrency === "KES" || selectedCurrency === "UGX" || selectedCurrency === "TZS"
+          ? 0
+          : 2,
       minimumFractionDigits: 0,
     }).format(converted)}`;
   };
@@ -402,12 +811,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     .filter((e) => e.status === "APPROVED" || e.status === "SUBMITTED")
     .reduce((sum, e) => sum + e.amount, 0);
 
-  const totalCampaignBudget = categories.reduce((sum, c) => sum + c.budgetLimit, 0);
+  const totalCampaignBudget = categories.reduce((sum, c) => sum + c.budgetLimit, 0) || 1;
 
   // Dynamic Budget Alerts (75% warning, 90%+ critical)
   const budgetAlerts: MockBudgetAlert[] = [];
 
-  // Category alerts
   categories.forEach((cat) => {
     const catSpent = expenses
       .filter((e) => e.categoryId === cat.id && (e.status === "APPROVED" || e.status === "SUBMITTED"))
@@ -443,7 +851,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // Event alerts
   events.forEach((evt) => {
     const evtSpent = expenses
       .filter((e) => e.eventId === evt.id && (e.status === "APPROVED" || e.status === "SUBMITTED"))
@@ -479,24 +886,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // Dismiss an alert
   const dismissAlert = (id: string) => {
-    setDismissedAlerts((prev) => [...prev, id]);
+    setDismissedAlertsByCampaign((prev) => ({
+      ...prev,
+      [effectiveCampaignId]: [...(prev[effectiveCampaignId] || []), id],
+    }));
   };
 
   // ─── SECURITY SETTINGS MUTATIONS ───────────────────────────────────
   const updateSecuritySettings = (settings: Partial<SecuritySettings>) => {
-    setSecuritySettings((prev) => {
-      const updated = { ...prev, ...settings };
-      logAuditEvent(
-        "SECURITY_SETTINGS_UPDATED",
-        "sec-config",
-        "Platform Security Policy",
-        `Security policy updated: 2FA=${updated.twoFactorEnabled}, SeparationOfDuties=${updated.separationOfDuties}, SessionTimeout=${updated.sessionTimeoutMinutes}m`,
-        "VERIFIED"
-      );
-      return updated;
-    });
+    const updated = { ...securitySettings, ...settings };
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      securitySettings: updated,
+    }));
+    logAuditEvent(
+      "SECURITY_SETTINGS_UPDATED",
+      "sec-config",
+      `${activeCampaign.politicianName} Security Policy`,
+      `Security policy updated: 2FA=${updated.twoFactorEnabled}, SeparationOfDuties=${updated.separationOfDuties}, SessionTimeout=${updated.sessionTimeoutMinutes}m`,
+      "VERIFIED"
+    );
   };
 
   const lockSession = () => {
@@ -505,14 +915,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       "SESSION_LOCKED",
       currentUser.id,
       currentUser.name,
-      "User manually locked the political campaign ledger session",
+      `User manually locked ${activeCampaign.politicianName}'s campaign ledger session`,
       "LOGGED"
     );
   };
 
   const unlockSession = (pinOrPassword: string): boolean => {
-    // Verified default passwords/PINs for campaign staff
-    const valid = pinOrPassword === "2026" || pinOrPassword === "password123" || pinOrPassword === "admin";
+    const valid =
+      pinOrPassword === activeCampaign.accessPin ||
+      pinOrPassword === "2026" ||
+      pinOrPassword === "password123" ||
+      pinOrPassword === "admin";
     if (valid) {
       setIsSessionLocked(false);
       setFailedUnlockAttempts(0);
@@ -520,7 +933,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         "SESSION_UNLOCKED",
         currentUser.id,
         currentUser.name,
-        "Session successfully authenticated and unlocked",
+        `Session authenticated and unlocked for ${activeCampaign.politicianName}`,
         "VERIFIED"
       );
       return true;
@@ -564,7 +977,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         approvedBy: expense.approvedBy,
       });
 
-      // Verify that record payload has valid attributes and hash is deterministically computable
       if (expectedHash && expectedHash.length === 64) {
         validCount++;
       } else {
@@ -586,7 +998,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await logAuditEvent(
       "INTEGRITY_SCAN_COMPLETED",
       "ledger-root",
-      "Financial Cryptographic Audit",
+      `${activeCampaign.politicianName} Cryptographic Audit`,
       `Integrity scan verified ${validCount}/${expenses.length} records. Merkle Root: ${report.merkleRoot.substring(0, 16)}...`,
       "VERIFIED"
     );
@@ -611,7 +1023,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       createdByName: currentUser.name,
       createdByRole: currentUser.role,
       createdAt: new Date().toISOString(),
-      // Auto-approve only if user is Politician AND Separation of Duties is disabled
       status:
         currentUser.role === "POLITICIAN" && !securitySettings.separationOfDuties
           ? "APPROVED"
@@ -626,7 +1037,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           : undefined,
     };
 
-    setExpenses((prev) => [newExpense, ...prev]);
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      expenses: [newExpense, ...ws.expenses],
+    }));
 
     await logAuditEvent(
       "EXPENSE_CREATED",
@@ -638,7 +1052,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateExpense = async (id: string, updates: Partial<MockExpense>) => {
-    setExpenses((prev) => prev.map((exp) => (exp.id === id ? { ...exp, ...updates } : exp)));
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      expenses: ws.expenses.map((exp) => (exp.id === id ? { ...exp, ...updates } : exp)),
+    }));
+
     await logAuditEvent(
       "EXPENSE_UPDATED",
       id,
@@ -650,12 +1068,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteExpense = async (id: string) => {
     const target = expenses.find((e) => e.id === id);
-    setExpenses((prev) => prev.filter((exp) => exp.id !== id));
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      expenses: ws.expenses.filter((exp) => exp.id !== id),
+    }));
+
     await logAuditEvent(
       "EXPENSE_DELETED",
       id,
       target?.description || id,
-      `Expense permanently removed by ${currentUser.name} (${currentUser.role}). Amount: KES ${target?.amount || 0}`,
+      `Expense permanently removed by ${currentUser.name} (${currentUser.role}). Amount: ${target?.currency || "KES"} ${target?.amount || 0}`,
       "ALERT"
     );
   };
@@ -664,7 +1086,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const target = expenses.find((e) => e.id === id);
     if (!target) return false;
 
-    // 1. Separation of Duties Enforcement (Four-Eyes Principle)
     if (securitySettings.separationOfDuties && target.createdById === currentUser.id) {
       setSecurityViolation(
         `Security Policy Enforcement: Separation of Duties (Four-Eyes Principle) prevents self-approval. You created "${target.description}". An independent auditor or candidate must review and authorize this expense.`
@@ -679,7 +1100,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // 2. High-value 2FA warning
     if (
       securitySettings.require2FAForLargeExpenses &&
       target.amount >= securitySettings.largeExpenseThreshold &&
@@ -688,8 +1108,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setIsTwoFactorModalOpen(true);
     }
 
-    setExpenses((prev) =>
-      prev.map((exp) =>
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      expenses: ws.expenses.map((exp) =>
         exp.id === id
           ? {
               ...exp,
@@ -699,8 +1120,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               rejectionReason: undefined,
             }
           : exp
-      )
-    );
+      ),
+    }));
 
     logAuditEvent(
       "EXPENSE_APPROVED",
@@ -715,8 +1136,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const rejectExpense = async (id: string, reason: string) => {
     const target = expenses.find((e) => e.id === id);
-    setExpenses((prev) =>
-      prev.map((exp) =>
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      expenses: ws.expenses.map((exp) =>
         exp.id === id
           ? {
               ...exp,
@@ -724,8 +1146,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               rejectionReason: reason,
             }
           : exp
-      )
-    );
+      ),
+    }));
 
     await logAuditEvent(
       "EXPENSE_REJECTED",
@@ -743,7 +1165,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ...data,
       id: `evt-${Date.now()}`,
     };
-    setEvents((prev) => [newEvent, ...prev]);
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      events: [newEvent, ...ws.events],
+    }));
 
     await logAuditEvent(
       "EVENT_CREATED",
@@ -755,7 +1180,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateEvent = async (id: string, updates: Partial<MockEvent>) => {
-    setEvents((prev) => prev.map((evt) => (evt.id === id ? { ...evt, ...updates } : evt)));
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      events: ws.events.map((evt) => (evt.id === id ? { ...evt, ...updates } : evt)),
+    }));
     await logAuditEvent(
       "EVENT_UPDATED",
       id,
@@ -767,7 +1195,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteEvent = async (id: string) => {
     const target = events.find((e) => e.id === id);
-    setEvents((prev) => prev.filter((evt) => evt.id !== id));
+    updateWorkspace(effectiveCampaignId, (ws) => ({
+      ...ws,
+      events: ws.events.filter((evt) => evt.id !== id),
+    }));
     await logAuditEvent(
       "EVENT_DELETED",
       id,
@@ -780,9 +1211,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AppContext.Provider
       value={{
+        campaigns,
+        activeCampaignId: effectiveCampaignId,
+        activeCampaign,
+        switchCampaign,
+        addCampaign,
+        updateCampaign,
+        deleteCampaign,
+        addTeamMember,
+        getCampaignWorkspace,
+        getCampaignMetrics,
+        isAddCampaignOpen,
+        setIsAddCampaignOpen,
+
         currentUser,
         switchUser,
-        allUsers: MOCK_USERS,
+        allUsers,
 
         activeTab,
         setActiveTab,
@@ -830,11 +1274,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         dismissedAlerts,
         dismissAlert,
 
-        // Theme
         isDarkMode,
         toggleDarkMode,
 
-        // Security additions
         securitySettings,
         updateSecuritySettings,
         isSessionLocked,
@@ -857,9 +1299,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) {
+  const ctx = useContext(AppContext);
+  if (!ctx) {
     throw new Error("useApp must be used within an AppProvider");
   }
-  return context;
+  return ctx;
 };

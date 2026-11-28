@@ -1,4 +1,12 @@
-import { EventType, EventStatus, ExpenseStatus, Role } from "@/lib/types";
+import {
+  EventType,
+  EventStatus,
+  ExpenseStatus,
+  Role,
+  PoliticianCampaign,
+  AuditLogEntry,
+  SecuritySettings,
+} from "@/lib/types";
 
 export interface MockUser {
   id: string;
@@ -72,6 +80,44 @@ export interface MockBudgetAlert {
   threshold: number;
   severity: "WARNING" | "CRITICAL";
   message: string;
+}
+
+export interface CampaignWorkspaceData {
+  users: MockUser[];
+  categories: MockCategory[];
+  events: MockEvent[];
+  expenses: MockExpense[];
+  auditLogs: AuditLogEntry[];
+  securitySettings: SecuritySettings;
+}
+
+/** Generate scaled IEBC-ready campaign categories for any politician budget cap. */
+export function createScaledCategories(totalBudgetCap: number): MockCategory[] {
+  const weights: Array<{
+    key: string;
+    name: string;
+    icon: string;
+    colorHex: string;
+    ratio: number;
+  }> = [
+    { key: "1", name: "Venue", icon: "🏛️", colorHex: "#3B82F6", ratio: 0.21 },
+    { key: "2", name: "Transport", icon: "🚌", colorHex: "#10B981", ratio: 0.16 },
+    { key: "3", name: "Catering", icon: "🍽️", colorHex: "#F59E0B", ratio: 0.13 },
+    { key: "4", name: "Security", icon: "🛡️", colorHex: "#EF4444", ratio: 0.10 },
+    { key: "5", name: "Media & Publicity", icon: "📰", colorHex: "#8B5CF6", ratio: 0.15 },
+    { key: "6", name: "Accommodation", icon: "🏨", colorHex: "#EC4899", ratio: 0.07 },
+    { key: "7", name: "Printing & Signage", icon: "🖨️", colorHex: "#06B6D4", ratio: 0.09 },
+    { key: "8", name: "Communication", icon: "📱", colorHex: "#84CC16", ratio: 0.05 },
+    { key: "9", name: "Miscellaneous", icon: "📁", colorHex: "#6B7280", ratio: 0.04 },
+  ];
+
+  return weights.map((w) => ({
+    id: `cat-${w.key}`,
+    name: w.name,
+    icon: w.icon,
+    colorHex: w.colorHex,
+    budgetLimit: Math.max(10000, Math.round((totalBudgetCap * w.ratio) / 5000) * 5000),
+  }));
 }
 
 // ─── USERS WITH DIFFERENT ROLES ──────────────────────────────────────
@@ -591,4 +637,460 @@ export const MOCK_AUDIT_LOGS = [
     status: "REJECTED" as const,
   },
 ];
+
+export const DEFAULT_CAMPAIGN_SECURITY_SETTINGS: SecuritySettings = {
+  twoFactorEnabled: false,
+  separationOfDuties: true,
+  sessionTimeoutMinutes: 15,
+  require2FAForLargeExpenses: true,
+  largeExpenseThreshold: 100000,
+  piiMaskingEnabled: true,
+  tamperProtectionActive: true,
+};
+
+// ─── CAMPAIGN 2: HON. PETER KAMAU (MOMBASA GOVERNOR) ─────────────────
+
+const PETER_USERS: MockUser[] = [
+  {
+    id: "pk-usr-1",
+    name: "Hon. Peter Kamau",
+    email: "peter.kamau@coastalprogress.ke",
+    role: "POLITICIAN",
+    avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80",
+    title: "Gubernatorial Candidate & Campaign Principal",
+  },
+  {
+    id: "pk-usr-2",
+    name: "Salim Bakari",
+    email: "salim.b@coastalprogress.ke",
+    role: "CAMPAIGN_MANAGER",
+    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
+    title: "County Campaign Strategist",
+  },
+  {
+    id: "pk-usr-3",
+    name: "Fatuma Omar",
+    email: "fatuma.o@coastalprogress.ke",
+    role: "STAFF",
+    avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=150&auto=format&fit=crop&q=80",
+    title: "Sub-County Logistics Lead",
+  },
+  {
+    id: "pk-usr-4",
+    name: "CPA Beatrice Wambui",
+    email: "beatrice.w@coastalaudit.co.ke",
+    role: "AUDITOR",
+    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+    title: "Chief Electoral Compliance Auditor",
+  },
+];
+
+const PETER_EVENTS: MockEvent[] = [
+  {
+    id: "pk-evt-1",
+    name: "Mvita Waterfront Maritime Economy Rally",
+    description: "Public launch of Blue Economy job creation charter and port logistics revitalization plan.",
+    eventType: "RALLY",
+    eventDate: "2026-11-30",
+    startTime: "10:00",
+    endTime: "17:00",
+    locationName: "Mama Ngina Waterfront Park",
+    locationAddress: "Mama Ngina Drive, Mvita, Mombasa",
+    expectedAttendance: 8500,
+    actualAttendance: 9100,
+    budget: 2200000,
+    status: "CONFIRMED",
+  },
+  {
+    id: "pk-evt-2",
+    name: "Likoni Ferry & South Coast Transport Forum",
+    description: "Community consultation on commuter ferry upgrades and coastal road transit corridors.",
+    eventType: "MEETING",
+    eventDate: "2026-12-03",
+    startTime: "09:00",
+    endTime: "13:00",
+    locationName: "Likoni Social Hall",
+    locationAddress: "Ukunda Highway, Likoni, Mombasa",
+    expectedAttendance: 600,
+    budget: 650000,
+    status: "IN_PROGRESS",
+  },
+  {
+    id: "pk-evt-3",
+    name: "Nyali Hospitality & Tourism Investors Dinner",
+    description: "Fundraiser and tourism tax reform dialogue with North Coast hoteliers.",
+    eventType: "FUNDRAISER",
+    eventDate: "2026-12-10",
+    startTime: "18:30",
+    endTime: "22:00",
+    locationName: "Voyager Beach Resort Pavilion",
+    locationAddress: "Mount Kenya Road, Nyali, Mombasa",
+    expectedAttendance: 220,
+    budget: 900000,
+    status: "PLANNED",
+  },
+];
+
+const PETER_EXPENSES: MockExpense[] = [
+  {
+    id: "pk-exp-1",
+    eventId: "pk-evt-1",
+    eventName: "Mvita Waterfront Maritime Economy Rally",
+    categoryId: "cat-1",
+    categoryName: "Venue",
+    categoryIcon: "🏛️",
+    categoryColor: "#3B82F6",
+    createdById: "pk-usr-3",
+    createdByName: "Fatuma Omar",
+    createdByRole: "STAFF",
+    expenseDate: "2026-11-22",
+    description: "Waterfront amphitheater municipal permit, main canopy stage & acoustic rigging",
+    notes: "Mombasa County permit #MSA-9921 cleared; includes high-wind coastal trussing.",
+    amount: 540000,
+    currency: "KES",
+    vendorName: "Pwani Event Structures Ltd",
+    location: "Mvita, Mombasa",
+    status: "APPROVED",
+    receiptName: "pwani_stage_permit_9921.pdf",
+    receiptSize: "1.8 MB",
+    approvedBy: "CPA Beatrice Wambui",
+    approvedAt: "2026-11-23T11:20:00Z",
+    createdAt: "2026-11-22T09:00:00Z",
+  },
+  {
+    id: "pk-exp-2",
+    eventId: "pk-evt-1",
+    eventName: "Mvita Waterfront Maritime Economy Rally",
+    categoryId: "cat-5",
+    categoryName: "Media & Publicity",
+    categoryIcon: "📰",
+    categoryColor: "#8B5CF6",
+    createdById: "pk-usr-2",
+    createdByName: "Salim Bakari",
+    createdByRole: "CAMPAIGN_MANAGER",
+    expenseDate: "2026-11-24",
+    description: "Coastal Swahili FM radio syndication & drone waterfront broadcast feed",
+    notes: "Live coverage across 4 regional stations covering Kilifi, Kwale, and Mombasa.",
+    amount: 420000,
+    currency: "KES",
+    vendorName: "Bahari Broadcast Network",
+    location: "Nyali, Mombasa",
+    status: "APPROVED",
+    receiptName: "bahari_radio_contract.pdf",
+    receiptSize: "940 KB",
+    approvedBy: "Hon. Peter Kamau",
+    approvedAt: "2026-11-24T16:15:00Z",
+    createdAt: "2026-11-24T12:00:00Z",
+  },
+  {
+    id: "pk-exp-3",
+    eventId: "pk-evt-2",
+    eventName: "Likoni Ferry & South Coast Transport Forum",
+    categoryId: "cat-2",
+    categoryName: "Transport",
+    categoryIcon: "🚌",
+    categoryColor: "#10B981",
+    createdById: "pk-usr-3",
+    createdByName: "Fatuma Omar",
+    createdByRole: "STAFF",
+    expenseDate: "2026-11-25",
+    description: "Tuk-tuk & mini-bus delegate shuttles across Changamwe, Kisauni, and Likoni",
+    amount: 265000,
+    currency: "KES",
+    vendorName: "Coastline Mobility Sacco",
+    location: "Likoni, Mombasa",
+    status: "SUBMITTED",
+    receiptName: "coastline_sacco_voucher.pdf",
+    receiptSize: "710 KB",
+    createdAt: "2026-11-25T14:30:00Z",
+  },
+  {
+    id: "pk-exp-4",
+    eventId: "pk-evt-3",
+    eventName: "Nyali Hospitality & Tourism Investors Dinner",
+    categoryId: "cat-3",
+    categoryName: "Catering",
+    categoryIcon: "🍽️",
+    categoryColor: "#F59E0B",
+    createdById: "pk-usr-2",
+    createdByName: "Salim Bakari",
+    createdByRole: "CAMPAIGN_MANAGER",
+    expenseDate: "2026-11-26",
+    description: "Advance banquet deposit for 220 coastal tourism delegates",
+    amount: 390000,
+    currency: "KES",
+    vendorName: "Voyager Resort Catering Services",
+    location: "Nyali, Mombasa",
+    status: "SUBMITTED",
+    receiptName: "voyager_banquet_proforma.pdf",
+    receiptSize: "1.1 MB",
+    createdAt: "2026-11-26T10:15:00Z",
+  },
+];
+
+const PETER_AUDIT_LOGS: AuditLogEntry[] = [
+  {
+    id: "pk-aud-001",
+    timestamp: "2026-11-24T16:15:00Z",
+    actorId: "pk-usr-1",
+    actorName: "Hon. Peter Kamau",
+    actorRole: "POLITICIAN",
+    action: "EXPENSE_APPROVED",
+    entityId: "pk-exp-2",
+    entityName: "Coastal Swahili FM Radio Syndication (KES 420,000)",
+    details: "Media broadcast invoice counter-signed by Gubernatorial Candidate.",
+    ipAddress: "41.90.112.18 (Mombasa, KE)",
+    hash: "b8f91c2294ab3f881e70d2c4f61a20e12d4e8c91a3b7f4d8e2c1a0987f654321",
+    status: "VERIFIED",
+  },
+  {
+    id: "pk-aud-002",
+    timestamp: "2026-11-23T11:20:00Z",
+    actorId: "pk-usr-4",
+    actorName: "CPA Beatrice Wambui",
+    actorRole: "AUDITOR",
+    action: "EXPENSE_APPROVED",
+    entityId: "pk-exp-1",
+    entityName: "Waterfront Amphitheater Permit & Rigging (KES 540,000)",
+    details: "Verified permit MSA-9921 and vendor tax PIN compliance.",
+    ipAddress: "41.90.112.50 (Mombasa, KE)",
+    hash: "7a12e5489c3b1d72f9a04e681234abcd5678ef901234567890abcdef12345678",
+    status: "VERIFIED",
+  },
+];
+
+// ─── CAMPAIGN 3: HON. GRACE WANJIKU (KISUMU WOMAN REP) ───────────────
+
+const GRACE_USERS: MockUser[] = [
+  {
+    id: "gw-usr-1",
+    name: "Hon. Grace Wanjiku",
+    email: "grace.w@lakebasinunity.ke",
+    role: "POLITICIAN",
+    avatar: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
+    title: "County Woman Representative Candidate",
+  },
+  {
+    id: "gw-usr-2",
+    name: "Brian Otieno",
+    email: "brian.o@lakebasinunity.ke",
+    role: "CAMPAIGN_MANAGER",
+    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
+    title: "Grassroots Field Operations Manager",
+  },
+  {
+    id: "gw-usr-3",
+    name: "Mercy Akinyi",
+    email: "mercy.a@lakebasinunity.ke",
+    role: "STAFF",
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+    title: "Market & Cooperative Liaison",
+  },
+  {
+    id: "gw-usr-4",
+    name: "CPA Daniel Kiprop",
+    email: "daniel.k@nileauditors.co.ke",
+    role: "AUDITOR",
+    avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
+    title: "Independent Electoral Auditor",
+  },
+];
+
+const GRACE_EVENTS: MockEvent[] = [
+  {
+    id: "gw-evt-1",
+    name: "Kondele Women Enterprise & Sacco Summit",
+    description: "Unveiling the county affirmative action micro-credit empowerment fund for market traders.",
+    eventType: "RALLY",
+    eventDate: "2026-12-01",
+    startTime: "09:30",
+    endTime: "15:30",
+    locationName: "Jomo Kenyatta Sports Ground",
+    locationAddress: "Jomo Kenyatta Highway, Kisumu",
+    expectedAttendance: 5200,
+    budget: 1100000,
+    status: "CONFIRMED",
+  },
+  {
+    id: "gw-evt-2",
+    name: "Dunga Beach Fisherfolk & Maternal Clinics Dialogue",
+    description: "Interactive lakeside ward baraza with women fisherfolk cooperatives.",
+    eventType: "MEETING",
+    eventDate: "2026-12-06",
+    startTime: "10:00",
+    endTime: "13:30",
+    locationName: "Dunga Boardwalk Ecological Center",
+    locationAddress: "Dunga Road, Kisumu",
+    expectedAttendance: 350,
+    budget: 380000,
+    status: "PLANNED",
+  },
+];
+
+const GRACE_EXPENSES: MockExpense[] = [
+  {
+    id: "gw-exp-1",
+    eventId: "gw-evt-1",
+    eventName: "Kondele Women Enterprise & Sacco Summit",
+    categoryId: "cat-1",
+    categoryName: "Venue",
+    categoryIcon: "🏛️",
+    categoryColor: "#3B82F6",
+    createdById: "gw-usr-3",
+    createdByName: "Mercy Akinyi",
+    createdByRole: "STAFF",
+    expenseDate: "2026-11-23",
+    description: "Sports ground hiring fee, shading tents (20 domes), and seating chairs",
+    amount: 310000,
+    currency: "KES",
+    vendorName: "Victoria Events & Marquees Ltd",
+    location: "Kisumu Central",
+    status: "APPROVED",
+    receiptName: "victoria_marquees_inv.pdf",
+    receiptSize: "1.2 MB",
+    approvedBy: "CPA Daniel Kiprop",
+    approvedAt: "2026-11-24T09:45:00Z",
+    createdAt: "2026-11-23T13:10:00Z",
+  },
+  {
+    id: "gw-exp-2",
+    eventId: "gw-evt-1",
+    eventName: "Kondele Women Enterprise & Sacco Summit",
+    categoryId: "cat-7",
+    categoryName: "Printing & Signage",
+    categoryIcon: "🖨️",
+    categoryColor: "#06B6D4",
+    createdById: "gw-usr-2",
+    createdByName: "Brian Otieno",
+    createdByRole: "CAMPAIGN_MANAGER",
+    expenseDate: "2026-11-25",
+    description: "Dholuo & Swahili enterprise grant brochures (10,000 copies)",
+    amount: 145000,
+    currency: "KES",
+    vendorName: "Nyanza Color Press",
+    location: "Oginga Odinga Street, Kisumu",
+    status: "APPROVED",
+    receiptName: "nyanza_press_brochures.pdf",
+    receiptSize: "640 KB",
+    approvedBy: "Hon. Grace Wanjiku",
+    approvedAt: "2026-11-25T17:00:00Z",
+    createdAt: "2026-11-25T11:20:00Z",
+  },
+  {
+    id: "gw-exp-3",
+    eventId: "gw-evt-2",
+    eventName: "Dunga Beach Fisherfolk & Maternal Clinics Dialogue",
+    categoryId: "cat-3",
+    categoryName: "Catering",
+    categoryIcon: "🍽️",
+    categoryColor: "#F59E0B",
+    createdById: "gw-usr-3",
+    createdByName: "Mercy Akinyi",
+    createdByRole: "STAFF",
+    expenseDate: "2026-11-27",
+    description: "Refreshments and solar PA sound hire for lakeside community baraza",
+    amount: 118000,
+    currency: "KES",
+    vendorName: "Winam Community Caterers",
+    location: "Dunga, Kisumu",
+    status: "SUBMITTED",
+    receiptName: "winam_baraza_quote.pdf",
+    receiptSize: "480 KB",
+    createdAt: "2026-11-27T08:40:00Z",
+  },
+];
+
+const GRACE_AUDIT_LOGS: AuditLogEntry[] = [
+  {
+    id: "gw-aud-001",
+    timestamp: "2026-11-25T17:00:00Z",
+    actorId: "gw-usr-1",
+    actorName: "Hon. Grace Wanjiku",
+    actorRole: "POLITICIAN",
+    action: "EXPENSE_APPROVED",
+    entityId: "gw-exp-2",
+    entityName: "Nyanza Color Press Brochures (KES 145,000)",
+    details: "Bilingual voter manifesto print run verified and approved.",
+    ipAddress: "196.201.214.12 (Kisumu, KE)",
+    hash: "9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d",
+    status: "VERIFIED",
+  },
+];
+
+// ─── MULTI-POLITICIAN CAMPAIGN REGISTRY ──────────────────────────────
+
+export const INITIAL_CAMPAIGNS: PoliticianCampaign[] = [
+  {
+    id: "camp-jane-2026",
+    slug: "jane-muthoni-2026",
+    politicianName: "Hon. Jane Muthoni",
+    office: "Nairobi Senate",
+    constituency: "Nairobi County",
+    party: "Civic Renewal Party (CRP)",
+    electionCycle: "Elections 2026",
+    accentColor: "blue",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+    defaultCurrency: "KES",
+    publicTransparencyEnabled: true,
+    accessPin: "2026",
+    createdAt: "2026-10-01T08:00:00Z",
+  },
+  {
+    id: "camp-peter-2026",
+    slug: "peter-kamau-2026",
+    politicianName: "Hon. Peter Kamau",
+    office: "Mombasa Governor",
+    constituency: "Mombasa County",
+    party: "Coastal Progress Alliance",
+    electionCycle: "Elections 2026",
+    accentColor: "emerald",
+    avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80",
+    defaultCurrency: "KES",
+    publicTransparencyEnabled: true,
+    accessPin: "2026",
+    createdAt: "2026-10-05T10:30:00Z",
+  },
+  {
+    id: "camp-grace-2026",
+    slug: "grace-wanjiku-2026",
+    politicianName: "Hon. Grace Wanjiku",
+    office: "Kisumu Woman Rep",
+    constituency: "Kisumu County",
+    party: "Lake Basin Unity Party",
+    electionCycle: "Elections 2026",
+    accentColor: "purple",
+    avatar: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
+    defaultCurrency: "KES",
+    publicTransparencyEnabled: true,
+    accessPin: "2026",
+    createdAt: "2026-10-12T12:00:00Z",
+  },
+];
+
+export const INITIAL_WORKSPACES: Record<string, CampaignWorkspaceData> = {
+  "camp-jane-2026": {
+    users: MOCK_USERS,
+    categories: MOCK_CATEGORIES,
+    events: MOCK_EVENTS,
+    expenses: MOCK_EXPENSES,
+    auditLogs: MOCK_AUDIT_LOGS,
+    securitySettings: DEFAULT_CAMPAIGN_SECURITY_SETTINGS,
+  },
+  "camp-peter-2026": {
+    users: PETER_USERS,
+    categories: createScaledCategories(8200000),
+    events: PETER_EVENTS,
+    expenses: PETER_EXPENSES,
+    auditLogs: PETER_AUDIT_LOGS,
+    securitySettings: DEFAULT_CAMPAIGN_SECURITY_SETTINGS,
+  },
+  "camp-grace-2026": {
+    users: GRACE_USERS,
+    categories: createScaledCategories(4600000),
+    events: GRACE_EVENTS,
+    expenses: GRACE_EXPENSES,
+    auditLogs: GRACE_AUDIT_LOGS,
+    securitySettings: DEFAULT_CAMPAIGN_SECURITY_SETTINGS,
+  },
+};
 

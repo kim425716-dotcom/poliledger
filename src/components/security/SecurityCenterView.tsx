@@ -22,6 +22,7 @@ import {
 
 export const SecurityCenterView = () => {
   const {
+    activeCampaign,
     securitySettings,
     updateSecuritySettings,
     lockSession,
@@ -49,7 +50,15 @@ export const SecurityCenterView = () => {
   const handleExportSecurityManifest = () => {
     const manifest = {
       platform: "PoliLedger Campaign Security & Compliance System",
-      version: "1.0-PROD",
+      version: "2.0-MULTICAMPAIGN",
+      campaign: {
+        id: activeCampaign.id,
+        slug: activeCampaign.slug,
+        politicianName: activeCampaign.politicianName,
+        office: activeCampaign.office,
+        constituency: activeCampaign.constituency,
+        party: activeCampaign.party,
+      },
       exportTimestamp: new Date().toISOString(),
       merkleRoot: auditLogs[0]?.hash || "GENESIS_POLILEDGER_ROOT",
       securitySettings,
@@ -75,7 +84,7 @@ export const SecurityCenterView = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `poliledger-security-manifest-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `poliledger-security-manifest-${activeCampaign.slug}-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

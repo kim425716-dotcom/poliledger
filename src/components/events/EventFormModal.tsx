@@ -6,7 +6,7 @@ import { EventType, EventStatus } from "@/lib/types";
 import { X } from "lucide-react";
 
 export const EventFormModal = () => {
-  const { isAddEventOpen, setIsAddEventOpen, addEvent } = useApp();
+  const { isAddEventOpen, setIsAddEventOpen, addEvent, activeCampaign } = useApp();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -55,9 +55,11 @@ export const EventFormModal = () => {
       <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-2xl space-y-5 my-8 text-gray-900 dark:text-gray-100 transition-colors">
         <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">Schedule Political Meeting or Rally</h3>
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">
+              Schedule Meeting or Rally &mdash; {activeCampaign.politicianName}
+            </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Establish event details, budget limits, and expected attendance
+              {activeCampaign.office} ({activeCampaign.constituency}) &bull; Establish budget &amp; attendance
             </p>
           </div>
           <button

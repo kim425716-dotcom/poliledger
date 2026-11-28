@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React from "react";
 import { useApp } from "@/context/AppContext";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -22,6 +22,8 @@ import { SecurityCenterView } from "@/components/security/SecurityCenterView";
 import { SessionLockModal } from "@/components/security/SessionLockModal";
 import { TwoFactorModal } from "@/components/security/TwoFactorModal";
 import { SecurityViolationModal } from "@/components/security/SecurityViolationModal";
+import { CampaignsOverviewView } from "@/components/campaigns/CampaignsOverviewView";
+import { CampaignFormModal } from "@/components/campaigns/CampaignFormModal";
 
 export default function Home() {
   const { activeTab } = useApp();
@@ -54,6 +56,8 @@ export default function Home() {
             </div>
           )}
 
+          {activeTab === "campaigns" && <CampaignsOverviewView />}
+
           {activeTab === "expenses" && <ExpenseList />}
 
           {activeTab === "events" && <EventList />}
@@ -71,6 +75,7 @@ export default function Home() {
       </div>
 
       {/* Global Modals */}
+      <CampaignFormModal />
       <ExpenseFormModal />
       <ReceiptViewerModal />
       <EventDetailModal />

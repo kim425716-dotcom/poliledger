@@ -6,7 +6,7 @@ import { formatDate } from "@/lib/utils";
 import { X, CheckCircle, Clock, XCircle, FileText, Download, ShieldCheck } from "lucide-react";
 
 export const ReceiptViewerModal = () => {
-  const { selectedReceiptExpense, setSelectedReceiptExpense, formatMoney } = useApp();
+  const { selectedReceiptExpense, setSelectedReceiptExpense, formatMoney, activeCampaign } = useApp();
 
   if (!selectedReceiptExpense) return null;
 
@@ -93,7 +93,7 @@ export const ReceiptViewerModal = () => {
             <div className="mx-auto max-w-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 p-6 shadow-sm text-left font-mono text-[11px] space-y-3 text-gray-900 dark:text-gray-100">
               <div className="border-b border-dashed border-gray-300 dark:border-gray-700 pb-3 text-center">
                 <p className="font-bold text-xs uppercase tracking-wider text-gray-900 dark:text-white">{exp.vendorName || "OFFICIAL RECEIPT"}</p>
-                <p className="text-gray-500 dark:text-gray-400 text-[10px]">{exp.location || "Nairobi, Kenya"}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-[10px]">{exp.location || activeCampaign.constituency}</p>
                 <p className="text-gray-400 dark:text-gray-500 text-[9px]">TAX PIN: P051289341X</p>
               </div>
 

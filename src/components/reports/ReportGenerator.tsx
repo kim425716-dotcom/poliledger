@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 
 export const ReportGenerator = () => {
-  const { expenses, events, categories, totalSpent, formatMoney } = useApp();
+  const { expenses, events, categories, totalSpent, formatMoney, activeCampaign, allUsers } = useApp();
+  const leadAuditor = allUsers.find((u) => u.role === "AUDITOR");
+  const candidateOwner = allUsers.find((u) => u.role === "POLITICIAN");
 
   const [selectedEventId, setSelectedEventId] = useState<string>("ALL");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("ALL");
@@ -149,15 +151,15 @@ export const ReportGenerator = () => {
                 <span>OFFICIAL CAMPAIGN EXPENSE AUDIT STATEMENT</span>
               </div>
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mt-1">
-                Campaign of Hon. Jane Muthoni &bull; Nairobi Senatorial Contest 2026
+                Campaign of {activeCampaign.politicianName} &bull; {activeCampaign.office} ({activeCampaign.constituency})
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Generated from PoliLedger Immutable Audit Database
+                {activeCampaign.party} &bull; {activeCampaign.electionCycle} &bull; PoliLedger Audit Ledger
               </p>
             </div>
             <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-              <p>Date of Report: <strong>November 21, 2026</strong></p>
-              <p>Reference: <strong>PL-AUD-2026-NBI</strong></p>
+              <p>Date of Report: <strong>November 28, 2026</strong></p>
+              <p>Reference: <strong>PL-AUD-{activeCampaign.slug.toUpperCase()}</strong></p>
               <p className="text-emerald-700 dark:text-emerald-400 font-bold mt-1">STATUS: VERIFIED</p>
             </div>
           </div>
@@ -228,14 +230,22 @@ export const ReportGenerator = () => {
         {/* Auditor Sign-off Block */}
         <div className="border-t-2 border-gray-200 dark:border-gray-800 pt-6 mt-8 grid grid-cols-2 gap-8 text-xs">
           <div>
-            <p className="font-bold text-gray-900 dark:text-white">Patrick Mwangi, CPA</p>
-            <p className="text-gray-500 dark:text-gray-400">Chief Auditor &amp; Compliance Director</p>
+            <p className="font-bold text-gray-900 dark:text-white">
+              {leadAuditor?.name || "Independent Compliance CPA"}
+            </p>
+            <p className="text-gray-500 dark:text-gray-400">
+              {leadAuditor?.title || "Chief Auditor & Compliance Director"}
+            </p>
             <div className="mt-4 border-b border-gray-400 dark:border-gray-600 w-48"></div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Digital Signature Timestamp: 2026-11-21T10:00:00Z</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Digital Signature Timestamp: 2026-11-28T10:00:00Z</p>
           </div>
           <div className="text-right">
-            <p className="font-bold text-gray-900 dark:text-white">Hon. Jane Muthoni</p>
-            <p className="text-gray-500 dark:text-gray-400">Candidate &amp; Account Principal</p>
+            <p className="font-bold text-gray-900 dark:text-white">
+              {candidateOwner?.name || activeCampaign.politicianName}
+            </p>
+            <p className="text-gray-500 dark:text-gray-400">
+              {activeCampaign.office} Candidate &amp; Account Principal
+            </p>
             <div className="mt-4 border-b border-gray-400 dark:border-gray-600 w-48 ml-auto"></div>
             <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Certified for Public Records</p>
           </div>

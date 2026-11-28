@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useApp } from "@/context/AppContext";
+import { getCampaignAccentClasses } from "@/lib/campaign-theme";
 import {
   LayoutDashboard,
   Receipt,
@@ -11,14 +12,25 @@ import {
   Globe2,
   History,
   ShieldCheck,
-  TrendingUp,
+  Users,
 } from "lucide-react";
 
 export const Sidebar = () => {
-  const { activeTab, setActiveTab, expenses, budgetAlerts, dismissedAlerts, totalSpent, formatMoney } = useApp();
+  const {
+    campaigns,
+    activeCampaign,
+    activeTab,
+    setActiveTab,
+    expenses,
+    budgetAlerts,
+    dismissedAlerts,
+    totalSpent,
+    formatMoney,
+  } = useApp();
 
   const pendingApprovalsCount = expenses.filter((e) => e.status === "SUBMITTED").length;
   const activeAlertsCount = budgetAlerts.filter((a) => !dismissedAlerts.includes(a.id)).length;
+  const accent = getCampaignAccentClasses(activeCampaign.accentColor);
 
   const navItems = [
     {
@@ -26,6 +38,13 @@ export const Sidebar = () => {
       label: "Dashboard",
       icon: LayoutDashboard,
       badge: null,
+    },
+    {
+      id: "campaigns",
+      label: "Politicians & Hub",
+      icon: Users,
+      badge: `${campaigns.length}`,
+      badgeColor: "bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300",
     },
     {
       id: "expenses",
@@ -57,8 +76,10 @@ export const Sidebar = () => {
       id: "transparency",
       label: "Public Portal",
       icon: Globe2,
-      badge: "Public",
-      badgeColor: "bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300",
+      badge: activeCampaign.publicTransparencyEnabled ? "Public" : "Private",
+      badgeColor: activeCampaign.publicTransparencyEnabled
+        ? "bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300"
+        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
     },
     {
       id: "audit",
@@ -98,13 +119,20 @@ export const Sidebar = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-gray-400 dark:text-gray-500"}`} />
+                    <Icon
+                      className={`h-4 w-4 ${
+                        isActive ? "text-white" : "text-gray-400 dark:text-gray-500"
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        isActive ? "bg-white/20 text-white" : item.badgeColor || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : item.badgeColor ||
+                            "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                       }`}
                     >
                       {item.badge}
@@ -117,17 +145,35 @@ export const Sidebar = () => {
         </div>
       </div>
 
-      {/* Campaign Summary Card in Sidebar */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-800/80 dark:to-blue-950/30 p-3.5 text-xs">
-        <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300 font-semibold mb-1">
-          <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+      {/* Active Politician Workspace Summary Card */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-800/80 dark:to-blue-950/30 p-3.5 text-xs space-y-2">
+        <div className="flex items-center justify-between gap-1">
+          <span
+            className={`inline-block rounded border px-1.5 py-0.5 text-[9px] font-bold ${accent.badge}`}
+          >
+            {activeCampaign.office}
+          </span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+            {activeCampaign.constituency}
+          </span>
+        </div>
+
+        <div>
+          <p className="font-bold text-gray-900 dark:text-white truncate">
+            {activeCampaign.politicianName}
+          </p>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+            {activeCampaign.party}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[11px] text-blue-900 dark:text-blue-300 font-semibold">
+          <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <span>IEBC Compliance Ready</span>
         </div>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 leading-relaxed">
-          All expenses are tracked with receipts and immutable audit logs.
-        </p>
+
         <div className="border-t border-gray-200/60 dark:border-gray-700/60 pt-2 flex items-center justify-between text-gray-600 dark:text-gray-400">
-          <span>Total Logged</span>
+          <span>Workspace Spend</span>
           <span className="font-bold text-gray-900 dark:text-white">{formatMoney(totalSpent)}</span>
         </div>
       </div>

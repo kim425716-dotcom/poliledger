@@ -11,14 +11,14 @@ export const ExpenseFormModal = () => {
     categories,
     events,
     addExpense,
-    selectedCurrency,
+    activeCampaign,
   } = useApp();
 
   const [eventId, setEventId] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id || "");
-  const [expenseDate, setExpenseDate] = useState("2026-11-21");
+  const [expenseDate, setExpenseDate] = useState("2026-11-28");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("KES");
+  const [currency, setCurrency] = useState(activeCampaign.defaultCurrency || "KES");
   const [description, setDescription] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [location, setLocation] = useState("");
@@ -39,7 +39,7 @@ export const ExpenseFormModal = () => {
       amount: Number(amount),
       currency,
       vendorName: vendorName || "Direct / Supplier",
-      location: location || "Nairobi",
+      location: location || activeCampaign.constituency,
       notes: notes || undefined,
       status: "SUBMITTED",
       receiptName: receiptFile ? receiptFile.name : "receipt_manual_upload.pdf",
@@ -63,9 +63,11 @@ export const ExpenseFormModal = () => {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">Log New Campaign Expense</h3>
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">
+              Log Expense &mdash; {activeCampaign.politicianName}
+            </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Attach receipt or invoice for auditor verification &amp; transparency
+              {activeCampaign.office} &bull; Attach receipt or invoice for auditor verification
             </p>
           </div>
           <button

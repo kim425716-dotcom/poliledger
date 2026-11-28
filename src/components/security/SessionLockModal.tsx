@@ -5,7 +5,7 @@ import { useApp } from "@/context/AppContext";
 import { Shield, Lock, KeyRound, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export const SessionLockModal = () => {
-  const { currentUser, isSessionLocked, unlockSession, failedUnlockAttempts } = useApp();
+  const { currentUser, activeCampaign, isSessionLocked, unlockSession, failedUnlockAttempts } = useApp();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
 
@@ -34,7 +34,7 @@ export const SessionLockModal = () => {
         <div className="mt-6 text-center space-y-1">
           <h3 className="text-xl font-bold tracking-tight text-white">Session Locked</h3>
           <p className="text-xs text-gray-400">
-            PoliLedger Campaign Security &bull; Sensitive Financial Data Protected
+            {activeCampaign.politicianName} &bull; {activeCampaign.office} &bull; Financial Vault
           </p>
         </div>
 
@@ -93,7 +93,10 @@ export const SessionLockModal = () => {
 
           <div className="rounded-lg bg-gray-800/50 p-3 text-[11px] text-gray-400 space-y-1">
             <p className="font-medium text-gray-300">Security Verification Credentials:</p>
-            <p>&bull; Default Demo PIN: <code className="text-blue-300 font-mono">2026</code></p>
+            <p>
+              &bull; Workspace PIN:{" "}
+              <code className="text-blue-300 font-mono">{activeCampaign.accessPin || "2026"}</code>
+            </p>
             <p>&bull; Master Password: <code className="text-blue-300 font-mono">password123</code></p>
           </div>
 
